@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>회차 관리</title>
+</head>
+<body>
+<h1>회차 관리</h1>
+<p th:if="${msg}" th:text="${msg}" style="color:blue"></p>
+
+<h2>엑셀 업로드</h2>
+<form th:action="@{/draws/upload}" method="post" enctype="multipart/form-data">
+    <input type="file" name="file" accept=".xlsx" required>
+    <button type="submit">업로드</button>
+</form>
+
+<h2>회차 직접 입력</h2>
+<form th:action="@{/draws/add}" method="post">
+    회차 <input type="number" name="round" th:value="${nextRound}" required>
+    <input type="number" name="n1" min="1" max="45" required>
+    <input type="number" name="n2" min="1" max="45" required>
+    <input type="number" name="n3" min="1" max="45" required>
+    <input type="number" name="n4" min="1" max="45" required>
+    <input type="number" name="n5" min="1" max="45" required>
+    <input type="number" name="n6" min="1" max="45" required>
+    <button type="submit">추가</button>
+</form>
+
+<h2>저장된 회차: <span th:text="${total}"></span>개 (최근 50개)</h2>
+<table border="1">
+    <tr><th>회차</th><th>번호</th></tr>
+    <tr th:each="d : ${draws}">
+        <td th:text="${d.round}"></td>
+        <td th:text="${#strings.listJoin(d.numbers(), ' · ')}"></td>
+    </tr>
+</table>
+</body>
+</html>
