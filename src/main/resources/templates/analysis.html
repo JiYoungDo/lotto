@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>가설 분석</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    table { border-collapse: collapse; margin-bottom: 20px; }
+    th, td { border: 1px solid #ccc; padding: 4px 10px; text-align: center; }
+    .ball { display: inline-block; width: 26px; height: 26px; line-height: 26px;
+      border-radius: 50%; text-align: center; background: #2f5fd0; color: #fff;
+      font-size: 12px; margin: 1px; }
+    .out { opacity: .3; }
+    .hit { color: #1f8a4c; font-weight: bold; }
+  </style>
+</head>
+<body>
+<p><a th:href="@{/draws}">회차 관리</a></p>
+<h1>가설 분석</h1>
+
+<form method="get" th:action="@{/analysis}">
+  신뢰구간 <input type="number" name="conf" min="1" max="99"
+              th:value="${#numbers.formatDecimal(conf, 1, 0)}">%
+  최소 회차 <input type="number" name="min" min="1" th:value="${min}">
+  <label><input type="checkbox" name="all" value="true" th:checked="${all}"> 전체 보기</label>
+  <button type="submit">분석</button>
+</form>
+
+<h2>가설 적중 통계 (분석 <span th:text="${total}"></span>회)</h2>
+<table>
+  <tr><th>케이스</th><th>적중</th><th>실제 비율</th><th>무작위 기대 비율</th>
+    <th>기대 횟수</th><th>평균 후보 조합 수</th></tr>
+  <tr th:each="s : ${stats}">
+    <td th:text="'케이스 ' + ${s.caseNo()}"></td>
+    <td th:text="${s.hits()} + ' / ' + ${s.total()}"></td>
+    <td th:text="${#numbers.formatDecimal(s.actualRate(), 1, 2)} + '%'"></td>
+    <td th:text="${#numbers.formatDecimal(s.expectedRate(), 1, 2)} + '%'"></td>
+    <td th:text="${#numbers.formatDecimal(s.expectedHits(), 1, 1)}"></td>
+    <td th:text="${#numbers.formatInteger(s.avgCandidates(), 1, 'COMMA')}"></td>
+  </tr>
+</table>
+
+<h2>회차별 판정</h2>
+<p>흐린 공 = 구간 밖 번호</p>
+<table>
+  <tr><th>회차</th><th>번호</th><th>케이스 1</th><th>케이스 2</th><th>케이스 3</th>
+    <th>케이스 4</th><th>케이스 5</th></tr>
+  <tr th:each="a : ${rows}">
+    <td th:text="${a.round()}"></td>
+    <td>
+        <span th:each="n : ${a.numbers()}" class="ball"
+              th:classappend="${a.center().contains(n)} ? '' : 'out'" th:text="${n}"></span>
+    </td>
+    <td th:each="c : ${#numbers.sequence(1, 5)}"
+        th:class="${a.hit(c)} ? 'hit' : ''"
+        th:text="${a.hit(c)} ? '적중' : '-'"></td>
+  </tr>
+</table>
+</body>
+</html>

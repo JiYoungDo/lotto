@@ -30,6 +30,24 @@ class AnalysisServiceTest {
         }
     }
 
+
+    @Test
+    void 후보_조합_수_계산() {
+        long[] c = AnalysisService.candidateCounts(27, 3);
+        assertArrayEquals(new long[]{296010, 134596, 127512, 2685150, 1453140}, c);
+        assertEquals(8145060L, (long) AnalysisService.comb(45, 6));
+    }
+
+    @Test
+    void 통계_합계가_맞다() {
+        var result = service.analyze(randomDraws(300), 60, 30);
+        var stats = service.summarize(result);
+        assertEquals(5, stats.size());
+        assertEquals(result.size(), stats.get(0).total());
+        assertEquals(result.stream().filter(AnalysisService.DrawAnalysis::c1).count(),
+                stats.get(0).hits());
+    }
+
     private List<Draw> randomDraws(int count) {
         Random rnd = new Random(42);
         List<Draw> list = new ArrayList<>();
@@ -42,4 +60,6 @@ class AnalysisServiceTest {
         }
         return list;
     }
+
+
 }
