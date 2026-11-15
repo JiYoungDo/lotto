@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { fetchPool } from '../api.js'
 import { useAuth } from '../auth.js'
 import { CASE_GUIDE } from '../hypotheses.js'
+import { useDrawEvents } from '../drawEvents.js'
 
 const REFRESH_MS = 30_000
 
@@ -11,6 +12,10 @@ export default function PoolStatus() {
   const { me } = useAuth()
   const [pool, setPool] = useState(null)
   const [error, setError] = useState(null)
+  const [tick, setTick] = useState(0)
+
+  // 관리자가 회차를 등록하면 다음 회차 기준으로 바로 다시 계산
+  useDrawEvents(() => setTick((n) => n + 1))
 
   useEffect(() => {
     let alive = true
@@ -20,7 +25,7 @@ export default function PoolStatus() {
     load()
     const t = setInterval(load, REFRESH_MS) // 다른 회원이 저장하면 30초 안에 반영
     return () => { alive = false; clearInterval(t) }
-  }, [])
+  }, [tick])
 
   if (error) return null
   const all = pool?.cases[0]

@@ -4,6 +4,7 @@ import { generateNumbers, fetchMyTickets, saveTickets, updateTicketMemo, deleteT
 import { useAuth } from '../auth.js'
 import Balls from '../components/Balls.jsx'
 import { CASE_GUIDE, sourceLabel, summaryLabel } from '../hypotheses.js'
+import { useDrawEvents } from '../drawEvents.js'
 
 // 가설 선택 카드: 0 = 무작위, 1~5 = 가설
 const PICKS = [
@@ -24,12 +25,24 @@ export default function MyPage() {
   })
   useEffect(() => { if (me?.loggedIn) load() }, [me?.loggedIn]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 관리자가 당첨 번호를 등록하면 새로고침 없이 결과를 다시 불러옴
+  useDrawEvents((e) => {
+    if (!me?.loggedIn) return
+    load()
+    if (e.action === 'saved' && e.round) setMsg(`${e.round}회 당첨 번호가 등록됐어요. 내 번호 결과를 확인하세요.`)
+  })
+
   if (!me) return null
   if (!me.loggedIn) return <Navigate to="/login" replace />
 
   const tickets = data?.tickets || []
   const pending = tickets.filter((t) => !t.drawn)
   const drawn = tickets.filter((t) => t.drawn)
+  // 위쪽 "내 번호": 추첨 전 번호 + 가장 최근에 추첨된 회차 번호 (결과가 바로 옆에 나옴)
+  const latestDrawn = data ? data.nextRound - 1 : 0
+  const current = tickets.filter((t) => !t.drawn || t.round === latestDrawn)
+  const past = drawn.filter((t) => t.round !== latestDrawn)
+  const currentRounds = [...new Set(current.map((t) => t.round))]
   const thisRound = pending.filter((t) => t.round === data?.nextRound).length
   const best = drawn.reduce((b, t) => Math.max(b, t.matchCount), -1)
 
@@ -76,17 +89,33 @@ export default function MyPage() {
       <section className="section band-soft" id="mine">
         <div className="container">
           <div className="section-head">
-            <h2 className="display-sm">추첨 전 내 번호</h2>
-            <p>아직 당첨 번호가 등록되지 않은 회차의 번호입니다. 메모에 구매처나 자동·수동 여부를 적어 둘 수 있습니다.</p>
+            <h2 className="display-sm">이번 회차 내 번호</h2>
+            <p>추첨 전 번호와 가장 최근 추첨 회차의 번호입니다. 관리자가 당첨 번호를 등록하면 새로고침하지 않아도 결과(낙첨, 몇 등)가 바로 표시됩니다.</p>
           </div>
           {msg && <p className="notice" style={{ marginTop: 0, marginBottom: 16 }}>{msg}</p>}
-          <div className="feature-card">
-            {!data ? <p className="empty">불러오는 중…</p> : pending.length === 0 ? (
-              <p className="empty">저장한 번호가 없습니다. 위에서 번호를 만들어 저장해 보세요.</p>
-            ) : (
-              <TicketTable rows={pending} onMemo={onMemo} onDelete={onDelete} />
-            )}
-          </div>
+          {!data ? (
+            <div className="feature-card"><p className="empty">불러오는 중…</p></div>
+          ) : current.length === 0 ? (
+            <div className="feature-card"><p className="empty">저장한 번호가 없습니다. 위에서 번호를 만들어 저장해 보세요.</p></div>
+          ) : (
+            <div className="result-groups">
+              {currentRounds.map((r) => {
+                const list = current.filter((t) => t.round === r)
+                return (
+                  <div key={r} className="feature-card">
+                    <div className="result-head">
+                      <div className="title-md">{r}회</div>
+                      <RoundStatus list={list} />
+                      {list[0].drawn && (
+                        <div className="result-win"><span className="caption">당첨 번호</span><Balls numbers={list[0].winning} /></div>
+                      )}
+                    </div>
+                    <TicketTable rows={list} onMemo={onMemo} onDelete={onDelete} />
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </section>
 
@@ -120,10 +149,10 @@ export default function MyPage() {
             </div>
           )}
 
-          {!data ? null : drawn.length === 0 ? (
-            <div className="feature-card"><p className="empty">아직 추첨된 회차의 번호가 없습니다.</p></div>
+          {!data ? null : past.length === 0 ? (
+            <div className="feature-card"><p className="empty">{drawn.length > 0 ? '최근 회차 결과는 위에 있습니다. 그보다 지난 회차 번호는 아직 없습니다.' : '아직 추첨된 회차의 번호가 없습니다.'}</p></div>
           ) : (
-            <ResultGroups rows={drawn} onMemo={onMemo} onDelete={onDelete} />
+            <ResultGroups rows={past} onMemo={onMemo} onDelete={onDelete} />
           )}
 
           <div className="setting-help">
@@ -313,16 +342,36 @@ function ManualEntry({ nextRound, onSaved }) {
 
 // ---------- 목록 ----------
 
+// 한 회차 결과 요약: 추첨 전 / 모두 낙첨 / 4등 1줄 · 낙첨 4줄
+function RoundStatus({ list }) {
+  if (!list[0].drawn) return <span className="result-chip pending">추첨 전</span>
+  const counts = {}
+  for (const t of list) counts[t.rank] = (counts[t.rank] || 0) + 1
+  const wins = list.filter((t) => t.matchCount >= 3).length
+  const order = ['1등', '5개 일치 (2·3등)', '4등', '5등', '낙첨']
+  const text = order.filter((k) => counts[k]).map((k) => `${k} ${counts[k]}줄`).join(' · ')
+  return <span className={'result-chip ' + (wins > 0 ? 'win' : 'lose')}>{wins === 0 ? `모두 낙첨 (${list.length}줄)` : text}</span>
+}
+
+function ResultBadge({ t }) {
+  if (!t.drawn) return <span className="result-chip pending">추첨 전</span>
+  return (
+    <span className={'result-chip ' + (t.matchCount >= 3 ? 'win' : 'lose')}>
+      {t.matchCount >= 3 ? `${t.rank} 당첨` : '낙첨'} · {t.matchCount}개 일치
+    </span>
+  )
+}
+
 function TicketTable({ rows, onMemo, onDelete }) {
   return (
     <div className="table-wrap">
       <table className="list-table">
-        <thead><tr><th>회차</th><th>번호</th><th>출처</th><th>메모</th><th className="r">관리</th></tr></thead>
+        <thead><tr><th>번호</th><th>결과</th><th>출처</th><th>메모</th><th className="r">관리</th></tr></thead>
         <tbody>
           {rows.map((t) => (
-            <tr key={t.id}>
-              <td className="num">{t.round}</td>
-              <td><Balls numbers={t.numbers} /></td>
+            <tr key={t.id} className={t.drawn && t.matchCount >= 3 ? 'row-win' : ''}>
+              <td><Balls numbers={t.numbers} dim={t.drawn ? t.numbers.filter((n) => !t.matched.includes(n)) : undefined} /></td>
+              <td><ResultBadge t={t} /></td>
               <td><span className="role-badge">{sourceLabel(t.caseNo)}</span></td>
               <td className="muted">{t.memo || '-'}</td>
               <td>

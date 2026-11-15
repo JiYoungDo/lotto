@@ -24,12 +24,21 @@ public class ApiController {
     private final AnalysisService analysis;
     private final ImportService importService;
     private final TicketService tickets;
+    private final DrawEventHub drawEvents;
 
-    public ApiController(DrawRepository repo, AnalysisService analysis, ImportService importService, TicketService tickets) {
+    public ApiController(DrawRepository repo, AnalysisService analysis, ImportService importService,
+                         TicketService tickets, DrawEventHub drawEvents) {
         this.repo = repo;
         this.analysis = analysis;
         this.importService = importService;
         this.tickets = tickets;
+        this.drawEvents = drawEvents;
+    }
+
+    /** 회차 변경 실시간 알림 (누구나). 이벤트: draw {action, round} */
+    @GetMapping(value = "/draws/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
+    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter drawStream() {
+        return drawEvents.subscribe();
     }
 
     /** 다음 회차 조합 현황: 가설별 전체·소진(회원이 저장)·남은 조합 수 */
@@ -70,6 +79,7 @@ public class ApiController {
         }
         List<Integer> s = n.stream().sorted().toList();
         repo.save(new Draw(req.round(), s.get(0), s.get(1), s.get(2), s.get(3), s.get(4), s.get(5)));
+        drawEvents.drawChanged("saved", req.round());   // 마이페이지 결과 즉시 갱신
         return ResponseEntity.ok(Map.of("message", req.round() + "회를 저장했습니다."));
     }
 
@@ -80,6 +90,7 @@ public class ApiController {
             return ResponseEntity.status(404).body(Map.of("message", round + "회는 없습니다."));
         }
         repo.deleteById(round);
+        drawEvents.drawChanged("deleted", round);
         return ResponseEntity.ok(Map.of("message", round + "회를 삭제했습니다."));
     }
 
@@ -88,6 +99,7 @@ public class ApiController {
     public ResponseEntity<Map<String, Object>> upload(@RequestParam("file") MultipartFile file) {
         try {
             int count = importService.importExcel(file.getInputStream());
+            drawEvents.drawChanged("uploaded", null);
             return ResponseEntity.ok(Map.of("message", count + "개 회차를 저장했습니다.", "count", count));
         } catch (Exception e) {
             return ResponseEntity.badRequest()

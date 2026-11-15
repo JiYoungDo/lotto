@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchDraws } from '../api.js'
 import PoolStatus from '../components/PoolStatus.jsx'
+import { useDrawEvents } from '../drawEvents.js'
 import Balls from '../components/Balls.jsx'
 
 const PAGE = 50
@@ -12,13 +13,17 @@ export default function Draws() {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [tick, setTick] = useState(0)
+
+  // 관리자가 회차를 등록·수정하면 목록을 바로 다시 불러옴
+  useDrawEvents(() => setTick((n) => n + 1))
 
   useEffect(() => {
     fetchDraws(limit)
       .then((d) => { setData(d); setError(null) })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
-  }, [limit])
+  }, [limit, tick])
 
   const more = () => { setLoading(true); setLimit(limit + PAGE) }
   const latest = data?.draws[0]
