@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -100,7 +101,8 @@ public class ApiController {
                 "round", a.round(),
                 "numbers", a.numbers(),
                 "center", a.center().stream().sorted().toList(),
-                "hits", IntStream.rangeClosed(1, 5).mapToObj(a::hit).toList()
+                "hits", IntStream.rangeClosed(1, 5).mapToObj(a::hit).toList(),
+                "candidates", Arrays.stream(a.candidates()).boxed().toList()   // 케이스 1~5 후보 조합 수
         )).toList();
 
         Map<String, Object> result = new java.util.HashMap<>(Map.of(

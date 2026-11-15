@@ -347,6 +347,8 @@ input[type=file].input { padding: 10px 16px; height: auto; }
 .down { color: var(--down); }
 .hit { color: var(--up); font-weight: 600; }
 .miss { color: var(--muted-soft); }
+.case-cell span { display: block; }
+.case-cell .case-count { margin-top: 2px; font: 400 11px var(--mono); color: var(--muted); }
 .note { margin-top: 24px; font-size: 14px; color: var(--muted); max-width: 720px; }
 
 /* ---------- Footer ---------- */

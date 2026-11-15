@@ -272,7 +272,7 @@ export default function Analysis() {
           <div className="section-head">
             <h2 className="display-sm">회차별 판정</h2>
             <p>
-              흐린 공은 그 회차 직전 기준 가운데 번호가 아닌 번호입니다.
+              흐린 공은 그 회차 직전 기준 가운데 번호가 아닌 번호입니다. 케이스 칸 아래 숫자는 그 회차에서 그 케이스를 만족하는 전체 조합 수(후보 가짓수, 전체 8,145,060개 중)입니다.
               {data && data.rows.length > 0 && ` ${showAll ? `전체 ${data.rows.length.toLocaleString()}회` : `최근 ${Math.min(RECENT, data.rows.length)}회`}를 최신순으로 보여줍니다.`}
             </p>
           </div>
@@ -295,7 +295,11 @@ export default function Analysis() {
                         <td><Balls numbers={a.numbers} dim={a.numbers.filter((n) => !a.center.includes(n))} /></td>
                         <td className="r num muted">{a.numbers.filter((n) => a.center.includes(n)).length} / {a.center.length}</td>
                         {a.hits.map((h, i) => (
-                          <td key={i} className={h ? 'hit' : 'miss'}>{h ? '적중' : '-'}</td>
+                          <td key={i} className={'case-cell ' + (h ? 'hit' : 'miss')}
+                              title={a.candidates ? `케이스 ${i + 1} 후보 ${a.candidates[i].toLocaleString()}개 조합` : undefined}>
+                            <span>{h ? '적중' : '-'}</span>
+                            {a.candidates && <span className="case-count">{a.candidates[i].toLocaleString()}개</span>}
+                          </td>
                         ))}
                       </tr>
                     ))}
