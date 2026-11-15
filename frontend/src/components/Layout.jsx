@@ -51,9 +51,13 @@ export default function Layout() {
         </div>
       </header>
       <Outlet />
-      <footer className="footer-light">
+      <footer className="footer-dark">
         <div className="container">
-          <p><b className="footer-tag">로또 연구소 · 번호 기록·분석 도구</b></p>
+          {/* 어두운 푸터에는 글자가 흰색인 로고 */}
+          <Link className="footer-brand" to="/draws">
+            <img src="/logo-dark.svg" alt="로또 연구소" height="32" />
+            <span className="footer-tag">번호 기록·분석 도구</span>
+          </Link>
           <p>회차별 번호 출현 횟수를 분석해서 내 가설이 맞았는지 기록하는 개인 분석 도구입니다.</p>
           <div className="legal-band">
             <Disclaimer compact />
