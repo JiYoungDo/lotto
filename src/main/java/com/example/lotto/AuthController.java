@@ -18,13 +18,13 @@ public class AuthController {
 
     public AuthController(MemberService members) { this.members = members; }
 
-    public record SignUpRequest(String username, String password) {}
+    public record SignUpRequest(String username, String password, Boolean adult) {}   // adult: 만 19세 이상 확인 (필수)
     public record PasswordRequest(String currentPassword, String newPassword) {}
 
     /** 회원가입: 일반 회원(USER)으로 DB에 저장 */
     @PostMapping("/signup")
     public ResponseEntity<Map<String, Object>> signUp(@RequestBody SignUpRequest req) {
-        Member m = members.signUp(req.username(), req.password());
+        Member m = members.signUp(req.username(), req.password(), Boolean.TRUE.equals(req.adult()));
         return ResponseEntity.status(201).body(Map.of("message", m.getUsername() + "님, 가입되었습니다."));
     }
 

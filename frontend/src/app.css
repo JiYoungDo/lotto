@@ -171,6 +171,9 @@ input[type=file].input { padding: 10px 16px; height: auto; }
 .inline-form .field { min-width: 140px; }
 .check { display: inline-flex; align-items: center; gap: 8px; height: 48px; color: var(--ink); font-size: 15px; }
 .check input { width: 18px; height: 18px; accent-color: var(--primary); }
+.adult-check { height: auto; cursor: pointer; }
+.adult-check b { color: var(--ink); font-weight: 600; }
+.adult-check .req { color: var(--down); font-size: 13px; }
 .notice {
   display: inline-block; margin-top: 32px; padding: 12px 20px; border-radius: 100px;
   background: var(--surface-strong); color: var(--ink); font-size: 14px; font-weight: 500;

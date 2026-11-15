@@ -102,7 +102,21 @@ class SecurityTest {
 
     private org.springframework.test.web.servlet.ResultActions signUp(String username, String password) throws Exception {
         return mvc.perform(post("/api/auth/signup").with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"" + username + "\",\"password\":\"" + password + "\"}"));
+                .content("{\"username\":\"" + username + "\",\"password\":\"" + password + "\",\"adult\":true}"));
+    }
+
+    @Test
+    void 만_19세_이상_확인_없이는_가입할_수_없다() throws Exception {
+        for (String extra : new String[]{"", ",\"adult\":false"}) {
+            mvc.perform(post("/api/auth/signup").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"username\":\"kid_user\",\"password\":\"password123\"" + extra + "}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("만 19세 이상만 가입할 수 있습니다. 나이 확인에 체크해 주세요."));
+        }
+        assertFalse(members.existsByUsername("kid_user"));
+
+        signUp("adult_user", "password123").andExpect(status().isCreated());
+        assertNotNull(members.findByUsername("adult_user").orElseThrow().getAdultConfirmedAt());
     }
 
     @Test

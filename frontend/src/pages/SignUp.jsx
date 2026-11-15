@@ -13,6 +13,7 @@ export default function SignUp() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [adult, setAdult] = useState(false)   // 만 19세 이상 확인 (필수)
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
 
@@ -21,7 +22,7 @@ export default function SignUp() {
   const nameOk = USERNAME_RE.test(username)
   const pwOk = password.length >= 8 && password.length <= 64
   const sameOk = confirm === password
-  const valid = nameOk && pwOk && sameOk
+  const valid = nameOk && pwOk && sameOk && adult
 
   const onSubmit = async (e) => {
     e.preventDefault()
@@ -29,7 +30,7 @@ export default function SignUp() {
     setBusy(true)
     setError(null)
     try {
-      await signUp(username, password)
+      await signUp(username, password, adult)
       await signIn(username, password)
       navigate('/mypage', { replace: true })
     } catch (err) {
@@ -66,6 +67,10 @@ export default function SignUp() {
               {confirm && !sameOk && <p className="field-hint bad">비밀번호가 일치하지 않습니다.</p>}
             </div>
             <Disclaimer />
+            <label className="check adult-check">
+              <input type="checkbox" required checked={adult} onChange={(e) => setAdult(e.target.checked)} />
+              <span><b>만 19세 이상입니다.</b> <span className="req">(필수)</span></span>
+            </label>
             <button className="btn btn-primary" type="submit" disabled={busy || !valid}>{busy ? '가입 중…' : '가입하기'}</button>
           </form>
           {error && <p className="notice">{error}</p>}

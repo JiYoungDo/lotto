@@ -45,11 +45,11 @@ export const fetchMe = () => request('/api/auth/me')
 export const login = (username, password) =>
   request('/api/auth/login', { method: 'POST', body: new URLSearchParams({ username, password }) })
 export const logout = () => request('/api/auth/logout', { method: 'POST' })
-export const signUp = (username, password) =>
+export const signUp = (username, password, adult) =>
   request('/api/auth/signup', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username, password, adult }),
   })
 export const changePassword = (currentPassword, newPassword) =>
   request('/api/auth/password', {

@@ -35,6 +35,8 @@ public class Member {
 
     private LocalDateTime lastLoginAt;    // 마지막 로그인
 
+    private LocalDateTime adultConfirmedAt;   // 가입할 때 "만 19세 이상" 확인한 시각 (이 기능 전에 가입한 회원은 null)
+
     protected Member() {}
 
     public Member(String username, String encodedPassword, Role role) {
@@ -53,6 +55,8 @@ public class Member {
 
     public boolean isSuspended() { return Boolean.TRUE.equals(suspended); }
     public LocalDateTime getLastLoginAt() { return lastLoginAt; }
+    public LocalDateTime getAdultConfirmedAt() { return adultConfirmedAt; }
+    public void confirmAdult() { this.adultConfirmedAt = LocalDateTime.now(ZONE); }
 
     public void setSuspended(boolean suspended) { this.suspended = suspended; }
     public void touchLogin() { this.lastLoginAt = LocalDateTime.now(ZONE); }

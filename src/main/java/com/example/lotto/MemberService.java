@@ -58,7 +58,8 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
 
     /** 가입 규칙을 어기면 IllegalArgumentException (메시지는 화면에 그대로 보여줌) */
     @Transactional
-    public Member signUp(String username, String password) {
+    public Member signUp(String username, String password, boolean adultConfirmed) {
+        if (!adultConfirmed) throw new IllegalArgumentException("만 19세 이상만 가입할 수 있습니다. 나이 확인에 체크해 주세요.");
         String name = username == null ? "" : username.trim();
         if (!USERNAME.matcher(name).matches()) {
             throw new IllegalArgumentException("아이디는 영문·숫자·밑줄(_)로 4~20자여야 합니다.");
@@ -67,7 +68,9 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
         if (repo.existsByUsername(name)) {
             throw new IllegalArgumentException("이미 사용 중인 아이디입니다.");
         }
-        return repo.save(new Member(name, encoder.encode(password), Member.Role.USER));
+        Member m = new Member(name, encoder.encode(password), Member.Role.USER);
+        m.confirmAdult();
+        return repo.save(m);
     }
 
     private static void checkPassword(String password) {
