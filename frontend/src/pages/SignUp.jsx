@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { signUp } from '../api.js'
 import { useAuth } from '../auth.js'
+import Disclaimer from '../components/Disclaimer.jsx'
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{4,20}$/
 
@@ -64,6 +65,7 @@ export default function SignUp() {
                      value={confirm} onChange={(e) => setConfirm(e.target.value)} />
               {confirm && !sameOk && <p className="field-hint bad">비밀번호가 일치하지 않습니다.</p>}
             </div>
+            <Disclaimer />
             <button className="btn btn-primary" type="submit" disabled={busy || !valid}>{busy ? '가입 중…' : '가입하기'}</button>
           </form>
           {error && <p className="notice">{error}</p>}

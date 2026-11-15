@@ -1,6 +1,7 @@
 import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth.js'
 import { useNotify } from '../notify.js'
+import Disclaimer from './Disclaimer.jsx'
 
 export default function Layout() {
   const cls = ({ isActive }) => (isActive ? 'active' : '')
@@ -17,7 +18,8 @@ export default function Layout() {
       <header className="top-nav">
         <div className="container nav-inner">
           <Link className="wordmark" to="/draws">
-            <img src="/logo.svg" alt="LottoLab" height="32" />
+            <img src="/logo.svg" alt="LottoLab" height="28" />
+            <span className="wordmark-tag">번호 기록·분석 도구</span>
           </Link>
           <nav className="nav-links">
             <NavLink to="/draws" className={cls}>회차 번호</NavLink>
@@ -51,9 +53,10 @@ export default function Layout() {
       <Outlet />
       <footer className="footer-light">
         <div className="container">
+          <p><b className="footer-tag">LottoLab · 번호 기록·분석 도구</b></p>
           <p>회차별 번호 출현 횟수를 분석해서 내 가설이 맞았는지 기록하는 개인 분석 도구입니다.</p>
           <div className="legal-band">
-            당첨을 보장하거나 확률을 높이지 않으며 오락·학습 용도입니다. 미성년자는 이용할 수 없고, 도박 문제 상담은 1336입니다.
+            <Disclaimer compact />
           </div>
         </div>
       </footer>

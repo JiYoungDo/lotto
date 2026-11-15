@@ -10,6 +10,7 @@ import { fetchMyChat, sendMyChat, readMyChat } from '../api.js'
 import ChatThread from '../components/ChatThread.jsx'
 import NotifyToggle from '../components/NotifyToggle.jsx'
 import { useNotify } from '../notify.js'
+import Disclaimer from '../components/Disclaimer.jsx'
 
 // 가설 선택 카드: 0 = 무작위, 1~5 = 가설
 const PICKS = [
@@ -227,6 +228,7 @@ function Generator({ nextRound, onSaved }) {
           <h2 className="display-sm">{nextRound ? `${nextRound}회` : '다음 회차'} 번호 만들기</h2>
           <p>가설을 고르면 지금까지의 당첨 번호로 계산한 가운데 번호를 기준으로, 그 가설의 조건을 만족하는 조합 중에서 무작위로 뽑습니다. 마음에 드는 줄만 골라 저장하세요. 다른 회원이 이미 저장한 조합은 나오지 않고 저장할 수도 없습니다.</p>
         </div>
+        <Disclaimer />
 
         <div className="pick-grid" role="radiogroup" aria-label="가설 선택">
           {PICKS.map((p) => (

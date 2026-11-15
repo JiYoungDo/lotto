@@ -75,6 +75,9 @@ a { color: var(--primary); text-decoration: none; }
 .top-nav { position: sticky; top: 0; z-index: 10; height: 64px; background: var(--canvas); border-bottom: 1px solid var(--hairline); }
 .nav-inner { height: 64px; display: flex; align-items: center; gap: 32px; }
 .wordmark { font-size: 20px; font-weight: 700; color: var(--primary); letter-spacing: -0.4px; }
+.top-nav .wordmark { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; flex-shrink: 0; }
+.wordmark-tag { font-size: 11px; font-weight: 600; letter-spacing: 0; color: var(--muted); line-height: 1; white-space: nowrap; }
+.footer-tag { color: var(--ink); font-size: 15px; }
 .nav-links { display: flex; gap: 24px; flex: 1; }
 .nav-links a { font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.4; }
 .nav-links a.active { color: var(--primary); }
@@ -86,6 +89,12 @@ a { color: var(--primary); text-decoration: none; }
   .nav-inner .btn { display: none; }
   .nav-inner .nav-auth .btn { display: inline-flex; }
   .nav-user { display: none; }
+  /* 휴대폰: 로고·로그인 줄 아래에 메뉴를 한 줄 더 두고, 넘치면 옆으로 밀어서 봄 */
+  .top-nav { height: auto; }
+  .nav-inner { height: auto; flex-wrap: wrap; justify-content: space-between; row-gap: 0; padding-top: 10px; }
+  .nav-links { order: 3; flex: 0 0 100%; gap: 20px; overflow-x: auto; padding: 10px 0 12px; scrollbar-width: none; }
+  .nav-links::-webkit-scrollbar { display: none; }
+  .nav-links a { white-space: nowrap; }
 }
 
 .nav-text { font-size: 14px; font-weight: 500; color: var(--ink); }
@@ -458,6 +467,13 @@ input[type=file].input { padding: 10px 16px; height: auto; }
 .footer-light { background: var(--canvas); border-top: 1px solid var(--hairline); padding: 48px 0 32px; }
 .footer-light .wordmark { display: inline-block; margin-bottom: 12px; }
 .footer-light p { font-size: 14px; max-width: 640px; }
+.disclaimer { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 24px; padding: 14px 16px; border-radius: 16px; background: #fff8e1; border: 1px solid #f3d27a; }
+.disclaimer-item { display: flex; flex-direction: column; gap: 2px; font-size: 13px; line-height: 1.5; color: #5c4600; }
+.disclaimer-item b { color: #3d2f00; font-size: 14px; }
+.disclaimer-item a, .disclaimer-line a { color: inherit; text-decoration: underline; font-weight: 700; }
+.disclaimer-line { margin: 0; }
+.feature-card form .disclaimer { grid-template-columns: 1fr; margin-bottom: 0; gap: 8px; }
+@media (max-width: 899px) { .disclaimer { grid-template-columns: 1fr; gap: 8px; } }
 .legal-band { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--hairline); font-size: 13px; color: var(--muted); }
 
 
