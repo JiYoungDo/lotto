@@ -7,6 +7,7 @@ import Login from './pages/Login.jsx'
 import SignUp from './pages/SignUp.jsx'
 import Community from './pages/Community.jsx'
 import Account from './pages/Account.jsx'
+import MyPage from './pages/MyPage.jsx'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/community" element={<Community />} />
         <Route path="/account" element={<Account />} />
+        <Route path="/mypage" element={<MyPage />} />
       </Route>
     </Routes>
   )

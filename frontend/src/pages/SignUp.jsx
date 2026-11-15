@@ -15,7 +15,7 @@ export default function SignUp() {
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
 
-  if (me?.loggedIn && !busy) return <Navigate to={me.admin ? '/admin' : '/draws'} replace />
+  if (me?.loggedIn && !busy) return <Navigate to={me.admin ? '/admin' : '/mypage'} replace />
 
   const nameOk = USERNAME_RE.test(username)
   const pwOk = password.length >= 8 && password.length <= 64
@@ -30,7 +30,7 @@ export default function SignUp() {
     try {
       await signUp(username, password)
       await signIn(username, password)
-      navigate('/draws', { replace: true })
+      navigate('/mypage', { replace: true })
     } catch (err) {
       setError(err.message)
       setBusy(false)

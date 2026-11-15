@@ -72,3 +72,10 @@ export const writePost = (content) => request('/api/community/posts', json('POST
 export const deletePost = (id) => request(`/api/community/posts/${id}`, { method: 'DELETE' })
 export const fetchCommunityStats = () => request('/api/admin/community')
 export const clearPosts = () => request('/api/admin/community/posts', { method: 'DELETE' })
+
+// 마이페이지
+export const generateNumbers = (caseNo, count, conf) => request(`/api/my/generate?caseNo=${caseNo}&count=${count}&conf=${conf}`)
+export const fetchMyTickets = () => request('/api/my/tickets')
+export const saveTickets = (body) => request('/api/my/tickets', json('POST', body))
+export const updateTicketMemo = (id, memo) => request(`/api/my/tickets/${id}`, json('PATCH', { memo }))
+export const deleteTicket = (id) => request(`/api/my/tickets/${id}`, { method: 'DELETE' })

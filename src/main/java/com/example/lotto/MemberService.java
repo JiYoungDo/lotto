@@ -35,14 +35,16 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final MemberRepository repo;
+    private final TicketRepository tickets;
     private final PasswordEncoder encoder;
     private final String adminUsername;
     private final String adminPassword;
 
-    public MemberService(MemberRepository repo, PasswordEncoder encoder,
+    public MemberService(MemberRepository repo, TicketRepository tickets, PasswordEncoder encoder,
                          @Value("${lotto.admin.username:admin}") String adminUsername,
                          @Value("${lotto.admin.password:}") String adminPassword) {
         this.repo = repo;
+        this.tickets = tickets;
         this.encoder = encoder;
         this.adminUsername = adminUsername;
         this.adminPassword = adminPassword;
@@ -191,6 +193,7 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
     @Transactional
     public String delete(Long id, String actor) {
         Member m = target(id, actor);
+        tickets.deleteByMemberId(m.getId());   // 그 회원의 구매 번호도 함께 삭제
         repo.delete(m);
         return m.getUsername();
     }

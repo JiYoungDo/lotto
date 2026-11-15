@@ -21,6 +21,7 @@ export default function Layout() {
             <NavLink to="/draws" className={cls}>회차 번호</NavLink>
             <NavLink to="/analysis" className={cls}>가설 분석</NavLink>
             <NavLink to="/community" className={cls}>커뮤니티</NavLink>
+            {me?.loggedIn && <NavLink to="/mypage" className={cls}>마이페이지</NavLink>}
             {admin && <NavLink to="/admin" className={cls}>관리자</NavLink>}
           </nav>
           {/* 로그인 상태 확인 전(me === null)에는 버튼을 잠시 숨김 */}
