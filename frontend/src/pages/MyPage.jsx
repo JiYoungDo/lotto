@@ -18,6 +18,7 @@ export default function MyPage() {
   const { me, refresh } = useAuth()
   const [data, setData] = useState(null)
   const [msg, setMsg] = useState(null)
+  const [openRounds, setOpenRounds] = useState(null) // 사용자가 직접 펼친 회차들 (null이면 기본값)
 
   const load = () => fetchMyTickets().then(setData).catch(async (e) => {
     setMsg(e.message)
@@ -43,6 +44,18 @@ export default function MyPage() {
   const current = tickets.filter((t) => !t.drawn || t.round === latestDrawn)
   const past = drawn.filter((t) => t.round !== latestDrawn)
   const currentRounds = [...new Set(current.map((t) => t.round))]
+  const pastRounds = [...new Set(past.map((t) => t.round))]
+  const opened = openRounds ?? new Set(currentRounds)
+  const toggle = (r) => {
+    const next = new Set(opened)
+    if (next.has(r)) next.delete(r); else next.add(r)
+    setOpenRounds(next)
+  }
+  const setAll = (rounds, open) => {
+    const next = new Set(opened)
+    for (const r of rounds) { if (open) next.add(r); else next.delete(r) }
+    setOpenRounds(next)
+  }
   const thisRound = pending.filter((t) => t.round === data?.nextRound).length
   const best = drawn.reduce((b, t) => Math.max(b, t.matchCount), -1)
 
@@ -98,23 +111,8 @@ export default function MyPage() {
           ) : current.length === 0 ? (
             <div className="feature-card"><p className="empty">저장한 번호가 없습니다. 위에서 번호를 만들어 저장해 보세요.</p></div>
           ) : (
-            <div className="result-groups">
-              {currentRounds.map((r) => {
-                const list = current.filter((t) => t.round === r)
-                return (
-                  <div key={r} className="feature-card">
-                    <div className="result-head">
-                      <div className="title-md">{r}회</div>
-                      <RoundStatus list={list} />
-                      {list[0].drawn && (
-                        <div className="result-win"><span className="caption">당첨 번호</span><Balls numbers={list[0].winning} /></div>
-                      )}
-                    </div>
-                    <TicketTable rows={list} onMemo={onMemo} onDelete={onDelete} />
-                  </div>
-                )
-              })}
-            </div>
+            <RoundFolds rounds={currentRounds} rows={current} opened={opened} onToggle={toggle} onSetAll={setAll}
+                        onMemo={onMemo} onDelete={onDelete} />
           )}
         </div>
       </section>
@@ -152,7 +150,8 @@ export default function MyPage() {
           {!data ? null : past.length === 0 ? (
             <div className="feature-card"><p className="empty">{drawn.length > 0 ? '최근 회차 결과는 위에 있습니다. 그보다 지난 회차 번호는 아직 없습니다.' : '아직 추첨된 회차의 번호가 없습니다.'}</p></div>
           ) : (
-            <ResultGroups rows={past} onMemo={onMemo} onDelete={onDelete} />
+            <RoundFolds rounds={pastRounds} rows={past} opened={opened} onToggle={toggle} onSetAll={setAll}
+                        onMemo={onMemo} onDelete={onDelete} />
           )}
 
           <div className="setting-help">
@@ -388,40 +387,42 @@ function TicketTable({ rows, onMemo, onDelete }) {
   )
 }
 
-function ResultGroups({ rows, onMemo, onDelete }) {
-  const rounds = [...new Set(rows.map((t) => t.round))]
+// 회차별로 접었다 폈다 하는 그룹. 접혀 있어도 제목 줄에 결과 요약이 보임.
+function RoundFolds({ rounds, rows, opened, onToggle, onSetAll, onMemo, onDelete }) {
+  const allOpen = rounds.every((r) => opened.has(r))
   return (
     <div className="result-groups">
+      {rounds.length > 1 && (
+        <div className="fold-tools">
+          <span className="caption">{rounds.length}개 회차</span>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => onSetAll(rounds, !allOpen)}>
+            {allOpen ? '모두 접기' : '모두 펼치기'}
+          </button>
+        </div>
+      )}
       {rounds.map((r) => {
         const list = rows.filter((t) => t.round === r)
-        const top = Math.max(...list.map((t) => t.matchCount))
+        const open = opened.has(r)
+        const top = list[0].drawn ? Math.max(...list.map((t) => t.matchCount)) : null
+        const bodyId = `round-${r}`
         return (
-          <div key={r} className="feature-card">
-            <div className="result-head">
-              <div className="title-md">{r}회</div>
-              <div className="result-win"><span className="caption">당첨 번호</span><Balls numbers={list[0].winning} /></div>
-              <span className="caption" style={{ marginLeft: 'auto' }}>{list.length}줄 · 최고 {top}개 일치</span>
-            </div>
-            <div className="table-wrap">
-              <table className="list-table">
-                <tbody>
-                  {list.map((t) => (
-                    <tr key={t.id}>
-                      <td><Balls numbers={t.numbers} dim={t.numbers.filter((n) => !t.matched.includes(n))} /></td>
-                      <td className="num">{t.matchCount}개</td>
-                      <td><span className={'role-badge' + (t.matchCount >= 3 ? ' admin' : '')}>{t.rank}</span></td>
-                      <td><span className="caption">{sourceLabel(t.caseNo)}{t.memo ? ` · ${t.memo}` : ''}</span></td>
-                      <td>
-                        <div className="row-actions">
-                          <button className="btn btn-secondary btn-sm" type="button" onClick={() => onMemo(t)}>메모</button>
-                          <button className="btn btn-danger btn-sm" type="button" onClick={() => onDelete(t)}>삭제</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div key={r} className={'feature-card fold' + (open ? ' open' : '')}>
+            <button type="button" className="fold-head" aria-expanded={open} aria-controls={bodyId} onClick={() => onToggle(r)}>
+              <span className="fold-arrow" aria-hidden="true">▸</span>
+              <span className="title-md">{r}회</span>
+              <RoundStatus list={list} />
+              <span className="caption fold-meta">{list.length}줄{top != null ? ` · 최고 ${top}개 일치` : ''}</span>
+            </button>
+            {open && (
+              <div className="fold-body" id={bodyId}>
+                {list[0].drawn && (
+                  <div className="result-win" style={{ marginBottom: 8 }}>
+                    <span className="caption">당첨 번호</span><Balls numbers={list[0].winning} />
+                  </div>
+                )}
+                <TicketTable rows={list} onMemo={onMemo} onDelete={onDelete} />
+              </div>
+            )}
           </div>
         )
       })}
