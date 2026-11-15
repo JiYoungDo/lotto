@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchDraws } from '../api.js'
+import PoolStatus from '../components/PoolStatus.jsx'
 import Balls from '../components/Balls.jsx'
 
 const PAGE = 50
@@ -49,6 +50,8 @@ export default function Draws() {
           </div>
         </div>
       </section>
+
+      <PoolStatus />
 
       <section className="section band-soft" id="list">
         <div className="container">

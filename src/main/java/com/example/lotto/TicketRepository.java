@@ -10,6 +10,7 @@ import java.util.List;
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
     List<Ticket> findByMemberIdOrderByRoundDescIdAsc(Long memberId);
     List<Ticket> findByMemberIdAndRound(Long memberId, int round);
+    List<Ticket> findByRound(int round);
 
     @Modifying
     @Query("delete from Ticket t where t.memberId = :memberId")

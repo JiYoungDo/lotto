@@ -33,6 +33,7 @@ class MyPageTest {
     @Autowired DrawRepository draws;
     @Autowired PasswordEncoder encoder;
     @Autowired MemberService memberService;
+    @Autowired AnalysisService analysis;
 
     @BeforeEach
     void setUp() {
@@ -122,5 +123,53 @@ class MyPageTest {
         save("leaver", "{\"sets\":[[1,2,3,4,5,6]]}").andExpect(status().isCreated());
         memberService.delete(members.findByUsername("leaver").orElseThrow().getId(), "admin");
         assertEquals(0, tickets.count());
+    }
+
+    @Test
+    void 다른_회원이_저장한_조합은_저장할_수_없다() throws Exception {
+        save("buyer", "{\"sets\":[[3,9,15,22,30,41]]}").andExpect(status().isCreated());
+        save("other", "{\"sets\":[[41,30,22,15,9,3]]}").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("다른 회원이 이미 저장한 조합")));
+        // 다른 회차라면 같은 조합도 가능
+        save("other", "{\"round\":60,\"sets\":[[3,9,15,22,30,41]]}").andExpect(status().isCreated());
+    }
+
+    @Test
+    void DB도_같은_회차_같은_조합을_막는다() {
+        Long a = members.findByUsername("buyer").orElseThrow().getId();
+        Long b = members.findByUsername("other").orElseThrow().getId();
+        tickets.saveAndFlush(new Ticket(a, 61, List.of(1, 2, 3, 4, 5, 6), null, null, null));
+        assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
+                () -> tickets.saveAndFlush(new Ticket(b, 61, List.of(1, 2, 3, 4, 5, 6), null, null, null)));
+    }
+
+    @Test
+    void 조합_현황은_누구나_보고_저장하면_소진된다() throws Exception {
+        var next = analysis.outlook(draws.findAllByOrderByRoundAsc(), 60);
+        // 케이스 1 조건(6개 모두 가운데)을 만족하는 조합 하나
+        List<Integer> c1 = NumberGenerator.generate(1, next.center(), next.prevNumbers(), new Random(3));
+        long total1 = NumberGenerator.candidates(1, next.center().size(), next.prevInCenter());
+
+        mvc.perform(get("/api/draws/pool"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.round").value(61))
+                .andExpect(jsonPath("$.cases[0].remaining").value(8145060))
+                .andExpect(jsonPath("$.cases[1].used").value(0));
+
+        save("buyer", "{\"sets\":[" + c1 + "]}").andExpect(status().isCreated());
+
+        mvc.perform(get("/api/draws/pool"))
+                .andExpect(jsonPath("$.savedTickets").value(1))
+                .andExpect(jsonPath("$.cases[0].used").value(1))
+                .andExpect(jsonPath("$.cases[0].remaining").value(8145059))
+                .andExpect(jsonPath("$.cases[1].used").value(1))
+                .andExpect(jsonPath("$.cases[1].remaining").value(total1 - 1))
+                .andExpect(jsonPath("$.cases[4].used").value(0));   // 케이스 4(가운데 4개)에는 해당 없음
+
+        // 번호 만들기에도 남은 수가 반영되고, 저장된 조합은 나오지 않는다
+        mvc.perform(get("/api/my/generate").param("caseNo", "1").param("count", "10").with(user("other").roles("USER")))
+                .andExpect(jsonPath("$.used").value(1))
+                .andExpect(jsonPath("$.remaining").value(total1 - 1))
+                .andExpect(jsonPath("$.sets[?(@ == " + c1 + ")]").isEmpty());
     }
 }

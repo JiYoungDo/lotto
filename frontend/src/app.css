@@ -261,6 +261,25 @@ input[type=file].input { padding: 10px 16px; height: auto; }
   .chat-list { padding: 14px; }
 }
 
+/* 회차 번호 화면: 남은 조합 */
+.pool-hero {
+  display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap;
+  padding: 28px 32px; border-radius: 24px; background: var(--surface-dark); color: var(--on-dark); margin-bottom: 16px;
+}
+.pool-hero .caption { color: var(--on-dark-soft); }
+.pool-big { font-size: 56px; line-height: 1.1; letter-spacing: -1px; color: var(--on-dark); margin: 6px 0; }
+.pool-big span { font: 500 18px var(--font); color: var(--on-dark-soft); letter-spacing: 0; }
+.pool-side { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+.pool-side > div { display: flex; flex-direction: column; gap: 2px; }
+.pool-side b { font-size: 22px; color: var(--on-dark); }
+.pool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.pool-card { background: var(--canvas); border: 1px solid var(--hairline); border-radius: 20px; padding: 20px; }
+.pool-title { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 12px; }
+.pool-num { font-size: 28px; letter-spacing: -0.5px; line-height: 1.15; }
+.pool-meta { display: flex; justify-content: space-between; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--hairline); font-size: 12px; color: var(--muted); }
+.pool-meta b { color: var(--ink); font-size: 12px; }
+@media (max-width: 639px) { .pool-big { font-size: 40px; } .pool-hero { padding: 24px; } }
+
 /* 마이페이지 */
 .pick-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
 .pick-card {

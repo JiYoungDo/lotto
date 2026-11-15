@@ -31,7 +31,7 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(auth -> auth
                 .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()   // 실시간 스트림(SSE)·오류 응답
-                .requestMatchers(HttpMethod.GET, "/api/draws", "/api/analysis", "/api/auth/me", "/api/community/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/draws", "/api/draws/pool", "/api/analysis", "/api/auth/me", "/api/community/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/signup").permitAll()
                 .requestMatchers("/api/auth/password", "/api/community/**", "/api/my/**").authenticated()   // 로그인한 회원
                 .requestMatchers("/api/**").hasRole("ADMIN")

@@ -6,7 +6,11 @@ import java.util.List;
 
 /** 회원이 산(또는 사려고 고른) 번호 한 줄. 추첨이 끝나면 그 회차 당첨 번호와 비교해 결과를 보여준다. */
 @Entity
-@Table(name = "ticket", indexes = @Index(columnList = "memberId, round"))
+@Table(name = "ticket",
+        indexes = @Index(columnList = "memberId, round"),
+        // 한 회차에서 같은 조합은 한 명만 저장할 수 있다
+        uniqueConstraints = @UniqueConstraint(name = "uk_ticket_round_numbers",
+                columnNames = {"round", "n1", "n2", "n3", "n4", "n5", "n6"}))
 public class Ticket {
 
     @Id

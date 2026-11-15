@@ -113,6 +113,14 @@ public class AnalysisService {
         return result;
     }
 
+    /** 번호 6개가 케이스 1~5 조건을 만족하는지 (center = 가운데 번호, prev = 직전 회차 번호) */
+    public static boolean[] caseHits(Collection<Integer> numbers, Collection<Integer> center, Collection<Integer> prev) {
+        long inCenter = numbers.stream().filter(center::contains).count();
+        long overlap = numbers.stream().filter(prev::contains).count();
+        boolean all = inCenter == 6;
+        return new boolean[]{all, all && overlap == 0, all && overlap == 1, inCenter == 4, inCenter == 5};
+    }
+
     public List<DrawAnalysis> analyze(List<Draw> draws, double confPercent, int minHistory) {
         double z = zOf(confPercent);
         int start = Math.max(1, minHistory);
@@ -125,13 +133,9 @@ public class AnalysisService {
                 Set<Integer> center = centerNumbers(counts, i, z);
                 List<Integer> prev = draws.get(i - 1).numbers();
                 int m = (int) prev.stream().filter(center::contains).count();
-                long inCenter = d.numbers().stream().filter(center::contains).count();
-                long overlap = d.numbers().stream().filter(prev::contains).count();
-                boolean all = inCenter == 6;
+                boolean[] h = caseHits(d.numbers(), center, prev);
                 out.add(new DrawAnalysis(d.getRound(), d.numbers(), center,
-                        center.size(), m,
-                        all, all && overlap == 0, all && overlap == 1,
-                        inCenter == 4, inCenter == 5));
+                        center.size(), m, h[0], h[1], h[2], h[3], h[4]));
             }
             for (int n : d.numbers()) counts[n]++;
         }

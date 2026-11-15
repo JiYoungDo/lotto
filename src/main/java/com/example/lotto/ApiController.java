@@ -23,11 +23,19 @@ public class ApiController {
     private final DrawRepository repo;
     private final AnalysisService analysis;
     private final ImportService importService;
+    private final TicketService tickets;
 
-    public ApiController(DrawRepository repo, AnalysisService analysis, ImportService importService) {
+    public ApiController(DrawRepository repo, AnalysisService analysis, ImportService importService, TicketService tickets) {
         this.repo = repo;
         this.analysis = analysis;
         this.importService = importService;
+        this.tickets = tickets;
+    }
+
+    /** 다음 회차 조합 현황: 가설별 전체·소진(회원이 저장)·남은 조합 수 */
+    @GetMapping("/draws/pool")
+    public Map<String, Object> pool(@RequestParam(defaultValue = "60") double conf) {
+        return tickets.pool(conf);
     }
 
     /** 새 회차 입력 요청 본문 {"round": 1247, "numbers": [1,2,3,4,5,6]} */

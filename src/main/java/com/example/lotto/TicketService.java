@@ -33,6 +33,58 @@ public class TicketService {
         return members.findByUsername(username).orElseThrow(() -> new NoSuchElementException("회원을 찾을 수 없습니다.")).getId();
     }
 
+    /** 그 회차에 누군가 이미 저장한 조합들 */
+    private Set<List<Integer>> takenSets(int round) {
+        Set<List<Integer>> out = new HashSet<>();
+        for (Ticket t : tickets.findByRound(round)) out.add(t.numbers());
+        return out;
+    }
+
+    /** 소진된 조합 수: [전체, 케이스1..5] (지금 가운데 번호 기준으로 각 조건을 만족하는 저장 조합 수) */
+    private long[] usedCounts(Collection<List<Integer>> taken, List<Integer> center, List<Integer> prev) {
+        long[] used = new long[6];
+        for (List<Integer> nums : taken) {
+            used[0]++;
+            boolean[] h = AnalysisService.caseHits(nums, center, prev);
+            for (int c = 0; c < 5; c++) if (h[c]) used[c + 1]++;
+        }
+        return used;
+    }
+
+    /** 다음 회차 조합 현황: 가설별 전체·소진·남은 조합 수 (누구나 볼 수 있음) */
+    public Map<String, Object> pool(double conf) {
+        if (conf < 1 || conf > 99) conf = 60;
+        List<Draw> all = draws.findAllByOrderByRoundAsc();
+        int round = nextRound(all);
+        AnalysisService.NextOutlook next = analysis.outlook(all, conf);
+        List<Ticket> saved = tickets.findByRound(round);
+        Set<List<Integer>> taken = new HashSet<>();
+        for (Ticket t : saved) taken.add(t.numbers());
+
+        List<Integer> center = next == null ? List.of() : next.center();
+        List<Integer> prev = next == null ? List.of() : next.prevNumbers();
+        long[] used = usedCounts(taken, center, prev);
+
+        List<Map<String, Object>> cases = new ArrayList<>();
+        cases.add(poolRow(0, 8_145_060L, used[0]));
+        for (int c = 1; c <= 5; c++) {
+            long total = next == null ? 0 : NumberGenerator.candidates(c, center.size(), next.prevInCenter());
+            cases.add(poolRow(c, total, used[c]));
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("round", round);
+        out.put("conf", conf);
+        out.put("centerSize", center.size());
+        out.put("savedTickets", saved.size());
+        out.put("savers", saved.stream().map(Ticket::getMemberId).distinct().count());
+        out.put("cases", cases);
+        return out;
+    }
+
+    private static Map<String, Object> poolRow(int caseNo, long total, long used) {
+        return Map.of("caseNo", caseNo, "total", total, "used", used, "remaining", Math.max(0, total - used));
+    }
+
     private int nextRound(List<Draw> all) {
         return all.isEmpty() ? 1 : all.get(all.size() - 1).getRound() + 1;
     }
@@ -53,18 +105,27 @@ public class TicketService {
         long candidates = next == null ? 8_145_060L : NumberGenerator.candidates(caseNo, center.size(), next.prevInCenter());
         if (candidates == 0) throw new IllegalArgumentException("지금 기준으로는 이 가설을 만족하는 조합이 없습니다. 신뢰구간을 바꿔 보세요.");
 
-        // 서로 다른 조합으로 count개 (후보가 그보다 적으면 가능한 만큼)
+        // 이미 다른 회원(또는 내)가 저장한 조합은 빼고, 서로 다른 조합으로 count개
+        int round = nextRound(all);
+        Set<List<Integer>> taken = takenSets(round);
+        long used = usedCounts(taken, center, prev)[caseNo];
+        long remaining = Math.max(0, candidates - used);
+        if (remaining == 0) throw new IllegalArgumentException("이 가설의 조합이 모두 소진되었습니다. 다른 가설을 골라 보세요.");
+
         Set<List<Integer>> sets = new LinkedHashSet<>();
-        int target = (int) Math.min(count, candidates);
-        for (int tries = 0; sets.size() < target && tries < 1000; tries++) {
-            sets.add(NumberGenerator.generate(caseNo, center, prev, RANDOM));
+        int target = (int) Math.min(count, remaining);
+        for (int tries = 0; sets.size() < target && tries < 5000; tries++) {
+            List<Integer> s = NumberGenerator.generate(caseNo, center, prev, RANDOM);
+            if (!taken.contains(s)) sets.add(s);
         }
 
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("round", nextRound(all));
+        out.put("round", round);
         out.put("caseNo", caseNo);
         out.put("conf", conf);
         out.put("candidates", candidates);
+        out.put("used", used);
+        out.put("remaining", remaining);
         out.put("probability", candidates / 8_145_060.0);   // 무작위로 나온 당첨 번호가 이 가설에 들어갈 확률
         out.put("center", center);
         out.put("prevNumbers", prev);
@@ -92,13 +153,18 @@ public class TicketService {
         if (existing.size() + req.sets().size() > MAX_PER_ROUND) {
             throw new IllegalArgumentException("한 회차에는 " + MAX_PER_ROUND + "줄까지 저장할 수 있습니다.");
         }
-        Set<List<Integer>> have = new HashSet<>();
-        for (Ticket t : existing) have.add(t.numbers());
+        Set<List<Integer>> mine = new HashSet<>();
+        for (Ticket t : existing) mine.add(t.numbers());
+        Set<List<Integer>> taken = takenSets(round);   // 모든 회원이 이 회차에 저장한 조합
 
         int saved = 0;
         for (List<Integer> nums : req.sets()) {
             List<Integer> sorted = validate(nums);
-            if (!have.add(sorted)) throw new IllegalArgumentException(round + "회에 이미 저장한 번호입니다: " + sorted);
+            if (mine.contains(sorted)) throw new IllegalArgumentException(round + "회에 이미 저장한 번호입니다: " + sorted);
+            if (!taken.add(sorted)) {
+                throw new IllegalArgumentException(round + "회에 다른 회원이 이미 저장한 조합입니다: " + sorted + " (한 조합은 한 명만 가질 수 있어요)");
+            }
+            mine.add(sorted);
             tickets.save(new Ticket(mid, round, sorted, caseNo, req.conf(), memo));
             saved++;
         }
