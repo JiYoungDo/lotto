@@ -69,7 +69,8 @@ class MyPageTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.round").value(61))
                 .andExpect(jsonPath("$.sets.length()").value(5))
-                .andExpect(jsonPath("$.sets[0].length()").value(6));
+                .andExpect(jsonPath("$.sets[0].length()").value(6))
+                .andExpect(jsonPath("$.center").isArray());   // 마이페이지가 가운데 번호 개수를 표시함
         mvc.perform(get("/api/my/generate").param("count", "11").with(user("buyer").roles("USER")))
                 .andExpect(status().isBadRequest());
     }

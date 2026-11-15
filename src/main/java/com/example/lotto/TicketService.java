@@ -127,6 +127,7 @@ public class TicketService {
         out.put("used", used);
         out.put("remaining", remaining);
         out.put("probability", candidates / 8_145_060.0);   // 무작위로 나온 당첨 번호가 이 가설에 들어갈 확률
+        out.put("center", center);
         out.put("prevNumbers", prev);
         out.put("sets", new ArrayList<>(sets));
         return out;
