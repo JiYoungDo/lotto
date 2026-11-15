@@ -2,30 +2,24 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchDraws } from '../api.js'
 import PoolStatus from '../components/PoolStatus.jsx'
-import { useDrawEvents } from '../drawEvents.js'
 import Balls from '../components/Balls.jsx'
+import { useDrawEvents } from '../drawEvents.js'
 
-const PAGE = 50
-
-// 누구나 볼 수 있는 회차별 당첨 번호 목록 (등록은 관리자 화면에서)
+// 회차 번호 화면: 최신 당첨 번호 + 다음 회차 남은 조합 현황
 export default function Draws() {
-  const [limit, setLimit] = useState(PAGE)
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
-  const [loading, setLoading] = useState(true)
   const [tick, setTick] = useState(0)
 
-  // 관리자가 회차를 등록·수정하면 목록을 바로 다시 불러옴
+  // 관리자가 회차를 등록·수정하면 최신 번호를 바로 다시 불러옴
   useDrawEvents(() => setTick((n) => n + 1))
 
   useEffect(() => {
-    fetchDraws(limit)
+    fetchDraws(1)
       .then((d) => { setData(d); setError(null) })
       .catch((e) => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [limit, tick])
+  }, [tick])
 
-  const more = () => { setLoading(true); setLimit(limit + PAGE) }
   const latest = data?.draws[0]
 
   return (
@@ -34,12 +28,13 @@ export default function Draws() {
         <div className="container hero-grid">
           <div>
             <span className="badge badge-dark">회차 데이터</span>
-            <h1 className="display-mega">회차별<br />당첨 번호</h1>
-            <p className="lead">지금까지의 모든 회차 당첨 번호를 볼 수 있습니다. 쌓인 데이터로 가설이 맞았는지 바로 분석합니다.</p>
+            <h1 className="display-mega">이번 회차<br />번호 현황</h1>
+            <p className="lead">최신 당첨 번호와, 다음 회차에서 가설별로 아직 남아 있는 조합을 확인하세요. 쌓인 데이터로 가설이 맞았는지는 가설 분석에서 볼 수 있습니다.</p>
             <div className="hero-actions">
               <Link className="btn btn-primary btn-lg" to="/analysis">가설 분석 보기</Link>
-              <a className="btn btn-outline-dark btn-lg" href="#list">번호 보기</a>
+              <a className="btn btn-outline-dark btn-lg" href="#pool">남은 조합 보기</a>
             </div>
+            {error && <p className="notice">서버에 연결하지 못했어요: {error}</p>}
           </div>
           <div className="hero-cards">
             <div className="card-dark card-back">
@@ -57,44 +52,6 @@ export default function Draws() {
       </section>
 
       <PoolStatus />
-
-      <section className="section band-soft" id="list">
-        <div className="container">
-          <div className="section-head">
-            <h2 className="display-sm">회차별 번호</h2>
-            <p>{data ? `총 ${data.total.toLocaleString()}회 중 최근 ${data.draws.length.toLocaleString()}회를 최신순으로 보여줍니다.` : '불러오는 중...'}</p>
-          </div>
-          {error && <p className="notice">서버에 연결하지 못했어요: {error}</p>}
-          {data && (
-            <div className="feature-card">
-              <div className="table-wrap">
-                {data.draws.length === 0 ? (
-                  <p className="empty">아직 등록된 회차가 없습니다.</p>
-                ) : (
-                  <table className="list-table">
-                    <thead><tr><th>회차</th><th>당첨 번호</th></tr></thead>
-                    <tbody>
-                      {data.draws.map((d) => (
-                        <tr key={d.round}>
-                          <td className="num">{d.round}</td>
-                          <td><Balls numbers={d.numbers} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-              {data.draws.length < data.total && (
-                <div style={{ marginTop: 24, textAlign: 'center' }}>
-                  <button className="btn btn-secondary" type="button" onClick={more} disabled={loading}>
-                    {loading ? '불러오는 중…' : `${PAGE}회 더 보기`}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
     </>
   )
 }

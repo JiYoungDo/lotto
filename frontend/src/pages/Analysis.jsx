@@ -23,14 +23,14 @@ const fmtP = (p) => (p == null ? '-' : p < 0.0001 ? '< 0.0001' : p.toFixed(4))
 export default function Analysis() {
   const [conf, setConf] = useState('60')
   const [min, setMin] = useState('30')
-  const [showAll, setShowAll] = useState(false)
+  const [visible, setVisible] = useState(RECENT) // 회차별 판정에 보여줄 회차 수 (최신부터)
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const load = (c, m) =>
     fetchAnalysis(c, m)
-      .then((d) => { setData(d); setError(null) })
+      .then((d) => { setData(d); setError(null); setVisible(RECENT) })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
   useEffect(() => { load(60, 30) }, []) // 처음 한 번 실행
@@ -49,7 +49,8 @@ export default function Analysis() {
     load(confNum, minNum)
   }
 
-  const rows = data ? (showAll ? data.rows : data.rows.slice(-RECENT)).slice().reverse() : []
+  const rows = data ? data.rows.slice(-visible).reverse() : []
+  const hidden = data ? Math.max(0, data.rows.length - visible) : 0 // 아직 안 보인 이전 회차 수
   const next = data?.next
   const best = data?.stats.length ? data.stats.reduce((a, b) => (b.pValue < a.pValue ? b : a)) : null
 
@@ -94,9 +95,6 @@ export default function Analysis() {
                 <label className="field-label" htmlFor="min">최소 회차</label>
                 <input className="input num" id="min" type="number" min="1" step="1" value={min} onChange={(e) => setMin(e.target.value)} />
               </div>
-              <label className="check">
-                <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} /> 전체 보기
-              </label>
               <button className="btn btn-primary" type="submit" disabled={loading || !!invalid}>
                 {loading ? '분석 중…' : '분석'}
               </button>
@@ -273,7 +271,7 @@ export default function Analysis() {
             <h2 className="display-sm">회차별 판정</h2>
             <p>
               흐린 공은 그 회차 직전 기준 가운데 번호가 아닌 번호입니다. 케이스 칸 아래 숫자는 그 회차에서 그 케이스를 만족하는 전체 조합 수(후보 가짓수, 전체 8,145,060개 중)입니다.
-              {data && data.rows.length > 0 && ` ${showAll ? `전체 ${data.rows.length.toLocaleString()}회` : `최근 ${Math.min(RECENT, data.rows.length)}회`}를 최신순으로 보여줍니다.`}
+              {data && data.rows.length > 0 && ` 최신 회차부터 ${RECENT}회씩 보여주며, 맨 아래 더 보기로 이전 회차를 이어서 볼 수 있습니다.`}
             </p>
           </div>
           <div className="feature-card">
@@ -307,6 +305,28 @@ export default function Analysis() {
                 </table>
               )}
             </div>
+            {data && data.rows.length > 0 && (
+              <div className="more-bar">
+                <span className="caption">
+                  {rows.length.toLocaleString()} / {data.rows.length.toLocaleString()}회 표시
+                  {rows.length > 0 && ` (${rows[0].round}회 ~ ${rows[rows.length - 1].round}회)`}
+                </span>
+                {hidden > 0 ? (
+                  <div className="form-actions">
+                    <button className="btn btn-secondary" type="button" onClick={() => setVisible(visible + RECENT)}>
+                      이전 {Math.min(RECENT, hidden)}회 더 보기
+                    </button>
+                    <button className="btn btn-secondary" type="button" onClick={() => setVisible(data.rows.length)}>
+                      전체 보기 (남은 {hidden.toLocaleString()}회)
+                    </button>
+                  </div>
+                ) : (
+                  visible > RECENT && (
+                    <button className="btn btn-secondary" type="button" onClick={() => setVisible(RECENT)}>최근 {RECENT}회만 보기</button>
+                  )
+                )}
+              </div>
+            )}
           </div>
         </div>
       </section>
