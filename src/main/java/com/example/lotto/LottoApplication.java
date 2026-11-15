@@ -2,8 +2,10 @@ package com.example.lotto;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
+@EnableScheduling   // 커뮤니티 실시간 연결 유지 신호(heartbeat)용
 //@SpringBootApplication이 붙은 클래스의 같은 패키지와 그 하위 패키지만 Spring이 뒤져서 쓸 클래스를 찾음.
 // 그래서 새 클래스는 com.example.lotto 안에 만들어야 함.다른 곳에 만들면 Spring이 못 찾아요.
 public class LottoApplication {

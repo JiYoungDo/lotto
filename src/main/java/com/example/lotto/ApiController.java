@@ -64,6 +64,16 @@ public class ApiController {
         return ResponseEntity.ok(Map.of("message", req.round() + "회를 저장했습니다."));
     }
 
+    /** 회차 삭제 (관리자) */
+    @DeleteMapping("/draws/{round}")
+    public ResponseEntity<Map<String, Object>> deleteDraw(@PathVariable int round) {
+        if (!repo.existsById(round)) {
+            return ResponseEntity.status(404).body(Map.of("message", round + "회는 없습니다."));
+        }
+        repo.deleteById(round);
+        return ResponseEntity.ok(Map.of("message", round + "회를 삭제했습니다."));
+    }
+
     /** 엑셀 업로드 (B열 회차, C~H열 번호 6개) */
     @PostMapping("/draws/upload")
     public ResponseEntity<Map<String, Object>> upload(@RequestParam("file") MultipartFile file) {
@@ -83,15 +93,20 @@ public class ApiController {
         if (conf < 1 || conf > 99) conf = 60;
         if (min < 1) min = 1;
 
-        var rows = analysis.analyze(repo.findAllByOrderByRoundAsc(), conf, min);
+        List<Draw> draws = repo.findAllByOrderByRoundAsc();
+        var rows = analysis.analyze(draws, conf, min);
 
         List<Map<String, Object>> rowDtos = rows.stream().map(a -> Map.<String, Object>of(
                 "round", a.round(),
                 "numbers", a.numbers(),
-                "center", a.center(),
+                "center", a.center().stream().sorted().toList(),
                 "hits", IntStream.rangeClosed(1, 5).mapToObj(a::hit).toList()
         )).toList();
 
-        return Map.of("conf", conf, "min", min, "stats", analysis.summarize(rows), "rows", rowDtos);
+        Map<String, Object> result = new java.util.HashMap<>(Map.of(
+                "conf", conf, "min", min, "totalDraws", draws.size(),
+                "stats", analysis.summarize(rows), "rows", rowDtos));
+        result.put("next", analysis.outlook(draws, conf));   // 데이터가 없으면 null
+        return result;
     }
 }

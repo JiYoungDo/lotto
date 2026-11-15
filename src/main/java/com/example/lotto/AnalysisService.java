@@ -28,8 +28,16 @@ public class AnalysisService {
         }
     }
 
+    /** pValue = 무작위라고 가정했을 때 적중이 hits번 이상 나올 확률 (한쪽 검정) */
     public record CaseStat(int caseNo, int hits, int total, double actualRate,
-                           double expectedRate, double expectedHits, double avgCandidates) {}
+                           double expectedRate, double expectedHits, double avgCandidates,
+                           double pValue) {}
+
+    /** 다음 회차(아직 추첨 전)를 지금까지의 전체 데이터로 판정한 기준 */
+    /** counts = 번호 1~45의 출현 횟수, mean·sd = 그 평균과 표준편차, z = 가운데 구간 경계(±z) */
+    public record NextOutlook(int round, List<Integer> center, List<Integer> prevNumbers,
+                              int prevInCenter, long[] candidates,
+                              List<Integer> counts, double mean, double sd, double z) {}
 
     // 조합의 수 nCk
     public static double comb(int n, int k) {
@@ -58,11 +66,46 @@ public class AnalysisService {
                 / (1 + 1.432788 * t + 0.189269 * t * t + 0.001308 * t * t * t);
     }
 
-    Set<Integer> centerNumbers(int[] counts, int upto, double z) {
-        double mean = upto * 6.0 / 45;
+    // 다음 회차의 가운데 번호와 케이스별 후보 조합 수
+    public NextOutlook outlook(List<Draw> draws, double confPercent) {
+        if (draws.isEmpty()) return null;
+        int[] counts = new int[46];
+        for (Draw d : draws) for (int n : d.numbers()) counts[n]++;
+        double z = zOf(confPercent);
+        Set<Integer> center = centerNumbers(counts, draws.size(), z);
+        Draw last = draws.get(draws.size() - 1);
+        int m = (int) last.numbers().stream().filter(center::contains).count();
+        double mean = draws.size() * 6.0 / 45;
+        List<Integer> countList = new ArrayList<>();
+        for (int n = 1; n <= 45; n++) countList.add(counts[n]);
+        return new NextOutlook(last.getRound() + 1, new TreeSet<>(center).stream().toList(),
+                last.numbers(), m, candidateCounts(center.size(), m),
+                countList, mean, sd(counts, mean), z);
+    }
+
+    // 회차마다 적중 확률 p_i가 다를 때, 적중 횟수가 hits 이상일 확률 (포아송-이항 분포를 DP로 정확히 계산)
+    static double tailProbability(double[] p, int hits) {
+        if (hits <= 0) return 1;
+        double[] dist = new double[p.length + 1];
+        dist[0] = 1;
+        for (int i = 0; i < p.length; i++) {
+            for (int k = i + 1; k >= 1; k--) dist[k] = dist[k] * (1 - p[i]) + dist[k - 1] * p[i];
+            dist[0] *= 1 - p[i];
+        }
+        double tail = 0;
+        for (int k = hits; k <= p.length; k++) tail += dist[k];
+        return Math.min(1, tail);
+    }
+
+    static double sd(int[] counts, double mean) {
         double sum = 0;
         for (int n = 1; n <= 45; n++) sum += Math.pow(counts[n] - mean, 2);
-        double sd = Math.sqrt(sum / 45);
+        return Math.sqrt(sum / 45);
+    }
+
+    Set<Integer> centerNumbers(int[] counts, int upto, double z) {
+        double mean = upto * 6.0 / 45;
+        double sd = sd(counts, mean);
         Set<Integer> result = new HashSet<>();
         for (int n = 1; n <= 45; n++) {
             if (counts[n] >= mean - z * sd && counts[n] <= mean + z * sd) result.add(n);
@@ -102,17 +145,21 @@ public class AnalysisService {
         for (int c = 1; c <= 5; c++) {
             int hits = 0;
             double exp = 0, cand = 0;
-            for (DrawAnalysis a : list) {
+            double[] probs = new double[total];
+            for (int i = 0; i < total; i++) {
+                DrawAnalysis a = list.get(i);
                 if (a.hit(c)) hits++;
                 long cc = a.candidates()[c - 1];
-                exp += cc / TOTAL;
+                probs[i] = cc / TOTAL;
+                exp += probs[i];
                 cand += cc;
             }
             out.add(new CaseStat(c, hits, total,
                     total == 0 ? 0 : hits * 100.0 / total,
                     total == 0 ? 0 : exp / total * 100,
                     exp,
-                    total == 0 ? 0 : cand / total));
+                    total == 0 ? 0 : cand / total,
+                    tailProbability(probs, hits)));
         }
         return out;
     }

@@ -61,5 +61,30 @@ class AnalysisServiceTest {
         return list;
     }
 
+    @Test
+    void 꼬리확률_계산() {
+        double[] half = {0.5, 0.5, 0.5};
+        assertEquals(1.0, AnalysisService.tailProbability(half, 0), 1e-12);
+        assertEquals(0.5, AnalysisService.tailProbability(half, 2), 1e-12);   // 3/8 + 1/8
+        assertEquals(0.125, AnalysisService.tailProbability(half, 3), 1e-12);
+        assertEquals(0.0, AnalysisService.tailProbability(half, 4), 1e-12);
+    }
 
+    @Test
+    void 다음회차_기준은_전체_데이터로_계산한다() {
+        List<Draw> draws = randomDraws(100);
+        var next = service.outlook(draws, 60);
+        assertEquals(101, next.round());
+        assertEquals(draws.get(99).numbers(), next.prevNumbers());
+        assertArrayEquals(AnalysisService.candidateCounts(next.center().size(), next.prevInCenter()),
+                next.candidates());
+        assertEquals(45, next.counts().size());
+        assertEquals(600, next.counts().stream().mapToInt(Integer::intValue).sum());
+        // 가운데 번호 = |출현 횟수 - 평균| <= z·sd 인 번호
+        for (int n = 1; n <= 45; n++) {
+            boolean inside = Math.abs(next.counts().get(n - 1) - next.mean()) <= next.z() * next.sd();
+            assertEquals(inside, next.center().contains(n));
+        }
+        assertNull(service.outlook(List.of(), 60));
+    }
 }

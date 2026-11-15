@@ -35,3 +35,9 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### 로컬 설정 (관리자 비밀번호 등) ###
+/config/
+
+### H2 로그 파일 ###
+*.trace.db

@@ -1,9 +1,23 @@
 // 서버(Spring Boot)와 통신하는 함수를 한 곳에 모아둡니다.
-async function request(url, options) {
-  const res = await fetch(url, options)
+
+// 서버가 내려준 CSRF 토큰 쿠키. 등록·업로드 같은 변경 요청에 헤더로 함께 보내야 합니다.
+const csrfToken = () => {
+  const m = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/)
+  return m ? decodeURIComponent(m[1]) : null
+}
+
+async function request(url, options = {}) {
+  const method = (options.method || 'GET').toUpperCase()
+  const headers = { ...options.headers }
+  if (method !== 'GET' && csrfToken()) headers['X-XSRF-TOKEN'] = csrfToken()
+  const res = await fetch(url, { ...options, headers, credentials: 'same-origin' })
   let body = null
   try { body = await res.json() } catch { /* 본문이 JSON이 아니면 무시 */ }
-  if (!res.ok) throw new Error(body?.message || `요청 실패 (${res.status})`)
+  if (!res.ok) {
+    const err = new Error(body?.message || `요청 실패 (${res.status})`)
+    err.status = res.status
+    throw err
+  }
   return body
 }
 
@@ -22,3 +36,39 @@ export const uploadExcel = (file) => {
   form.append('file', file)
   return request('/api/draws/upload', { method: 'POST', body: form })
 }
+
+export const deleteDraw = (round) => request(`/api/draws/${round}`, { method: 'DELETE' })
+
+// 로그인
+export const fetchMe = () => request('/api/auth/me')
+export const login = (username, password) =>
+  request('/api/auth/login', { method: 'POST', body: new URLSearchParams({ username, password }) })
+export const logout = () => request('/api/auth/logout', { method: 'POST' })
+export const signUp = (username, password) =>
+  request('/api/auth/signup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  })
+export const changePassword = (currentPassword, newPassword) =>
+  request('/api/auth/password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  })
+
+// 관리자: 회원 관리
+const json = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+export const fetchMembers = () => request('/api/admin/members')
+export const fetchMemberStats = () => request('/api/admin/members/stats')
+export const setMemberRole = (id, role) => request(`/api/admin/members/${id}/role`, json('PATCH', { role }))
+export const setMemberSuspended = (id, suspended) => request(`/api/admin/members/${id}/suspend`, json('PATCH', { suspended }))
+export const resetMemberPassword = (id) => request(`/api/admin/members/${id}/reset-password`, { method: 'POST' })
+export const deleteMember = (id) => request(`/api/admin/members/${id}`, { method: 'DELETE' })
+
+// 커뮤니티
+export const fetchPosts = () => request('/api/community/posts')
+export const writePost = (content) => request('/api/community/posts', json('POST', { content }))
+export const deletePost = (id) => request(`/api/community/posts/${id}`, { method: 'DELETE' })
+export const fetchCommunityStats = () => request('/api/admin/community')
+export const clearPosts = () => request('/api/admin/community/posts', { method: 'DELETE' })
