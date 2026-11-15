@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { subscribeStream } from './stream.js'
 
 /**
  * 관리자가 회차(당첨 번호)를 등록·수정·삭제·업로드하면 서버가 알려주는 실시간 이벤트를 받습니다.
@@ -9,14 +10,7 @@ export function useDrawEvents(onChange) {
   const handler = useRef(onChange)
   useEffect(() => { handler.current = onChange })
 
-  useEffect(() => {
-    const es = new EventSource('/api/draws/stream')
-    let opened = false
-    es.onopen = () => {
-      if (opened) handler.current({ action: 'reconnect' })
-      opened = true
-    }
-    es.addEventListener('draw', (ev) => handler.current(JSON.parse(ev.data)))
-    return () => es.close()
-  }, [])
+  useEffect(() => subscribeStream('/api/draws/stream', ['draw'], (name, data) => {
+    handler.current(name === 'reconnect' ? { action: 'reconnect' } : data)
+  }), [])
 }

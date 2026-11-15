@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import { generateNumbers, fetchMyTickets, saveTickets, updateTicketMemo, deleteTicket } from '../api.js'
 import { useAuth } from '../auth.js'
 import Balls from '../components/Balls.jsx'
@@ -8,6 +8,8 @@ import { useDrawEvents } from '../drawEvents.js'
 import { useChatEvents } from '../chat.js'
 import { fetchMyChat, sendMyChat, readMyChat } from '../api.js'
 import ChatThread from '../components/ChatThread.jsx'
+import NotifyToggle from '../components/NotifyToggle.jsx'
+import { useNotify } from '../notify.js'
 
 // 가설 선택 카드: 0 = 무작위, 1~5 = 가설
 const PICKS = [
@@ -100,6 +102,8 @@ export default function MyPage() {
         </div>
       </section>
 
+      <MemberChat />
+
       <Generator nextRound={data?.nextRound} onSaved={(m) => { setMsg(m); load() }} />
 
       <section className="section band-soft" id="mine">
@@ -119,8 +123,6 @@ export default function MyPage() {
           )}
         </div>
       </section>
-
-      <MemberChat />
 
       <section className="section" id="results">
         <div className="container">
@@ -439,12 +441,30 @@ function RoundFolds({ rounds, rows, opened, onToggle, onSetAll, onMemo, onDelete
 
 function MemberChat() {
   const [chat, setChat] = useState(null)
+  const { refreshUnread, setViewing } = useNotify()
+  const location = useLocation()
 
+  const markRead = () => readMyChat().then(refreshUnread).catch(() => {})
   const load = () => fetchMyChat().then((c) => {
     setChat(c)
-    if (c.eligible && c.unread > 0) readMyChat().catch(() => {}) // 화면에 보였으니 읽음 처리
+    if (c.eligible && c.unread > 0) markRead() // 화면에 보였으니 읽음 처리
   }).catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 처음 한 번만 불러옴
   useEffect(() => { load() }, [])
+
+  // 이 화면에 있는 동안은 관리자 메시지 팝업 대신 바로 대화창에 표시
+  useEffect(() => {
+    if (!chat?.eligible) return undefined
+    setViewing('me')
+    return () => setViewing(null)
+  }, [chat?.eligible, setViewing])
+
+  // 알림을 눌러 /mypage#chat 으로 오면 채팅으로 스크롤
+  useEffect(() => {
+    if (chat?.eligible && location.hash === '#chat') {
+      document.getElementById('chat')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [chat?.eligible, location.hash, location.key])
 
   // 당첨 번호가 등록되면 채팅 자격이 새로 생길 수 있음
   useDrawEvents(() => load())
@@ -453,7 +473,7 @@ function MemberChat() {
   useChatEvents(!!chat?.eligible, (m) => {
     if (!m) { load(); return }
     setChat((c) => (c && !c.messages.some((x) => x.id === m.id) ? { ...c, messages: [...c.messages, m] } : c))
-    if (m.fromAdmin) readMyChat().catch(() => {})
+    if (m.fromAdmin) markRead()
   })
 
   if (!chat?.eligible) return null
@@ -464,7 +484,7 @@ function MemberChat() {
   }
 
   return (
-    <section className="section" id="chat">
+    <section className="section band-soft" id="chat">
       <div className="container" style={{ maxWidth: 860 }}>
         <div className="win-banner">
           <strong>당첨을 축하드려요!</strong>
@@ -472,6 +492,7 @@ function MemberChat() {
         </div>
         <div className="section-head" style={{ marginBottom: 20 }}>
           <h2 className="display-sm">관리자와 채팅</h2>
+          <NotifyToggle />
           <p>당첨 기록이 있는 회원만 관리자와 1:1로 대화할 수 있습니다. 메시지는 실시간으로 주고받으며, 다른 회원에게는 보이지 않습니다. 비밀번호나 계좌번호 같은 민감한 정보는 보내지 마세요.</p>
         </div>
         <ChatThread messages={chat.messages} viewerIsAdmin={false} onSend={send} maxLength={chat.maxLength}

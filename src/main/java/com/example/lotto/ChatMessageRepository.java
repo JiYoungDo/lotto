@@ -11,6 +11,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     List<ChatMessage> findByMemberIdOrderByIdAsc(Long memberId);
     List<ChatMessage> findAllByOrderByIdDesc();
     long countByMemberIdAndFromAdminTrueAndReadByMemberFalse(Long memberId);
+    long countByFromAdminFalseAndReadByAdminFalse();
 
     @Modifying
     @Query("update ChatMessage m set m.readByMember = true where m.memberId = :memberId and m.fromAdmin = true")

@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useNotify } from '../../notify.js'
+import NotifyToggle from '../../components/NotifyToggle.jsx'
 import {
   fetchWinnerRounds, fetchWinnerRound, fetchConversations, fetchThread, sendAdminChat, readAdminChat,
 } from '../../api.js'
@@ -20,6 +23,9 @@ export default function WinnerAdmin() {
   const [thread, setThread] = useState(null)
   const [error, setError] = useState(null)
   const chatRef = useRef(null)
+  const { refreshUnread, setViewing } = useNotify()
+  const location = useLocation()
+  const navigate = useNavigate()
 
   const loadRounds = () => fetchWinnerRounds().then((r) => {
     setRounds(r)
@@ -34,8 +40,25 @@ export default function WinnerAdmin() {
   }, [round])
   useEffect(() => {
     if (openId == null) return
-    fetchThread(openId).then((t) => { setThread(t); loadConvs() }).catch((e) => setError(e.message))
-  }, [openId])
+    fetchThread(openId).then((t) => { setThread(t); loadConvs(); refreshUnread() }).catch((e) => setError(e.message))
+  }, [openId, refreshUnread])
+
+  // 열어 둔 대화의 새 메시지는 팝업 대신 바로 대화창에 표시
+  useEffect(() => {
+    setViewing(openId)
+    return () => setViewing(null)
+  }, [openId, setViewing])
+
+  // 알림을 눌러 들어오면 그 회원과의 대화를 열고 채팅으로 스크롤
+  useEffect(() => {
+    const target = location.state?.openChat
+    if (target == null) return
+    // 주소(이동 상태)라는 바깥 값에 맞춰 대화를 여는 것이라 effect에서 설정
+    // eslint-disable-next-line react/set-state-in-effect
+    setOpenId(target)
+    setTimeout(() => chatRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+    navigate(location.pathname + location.search, { replace: true, state: null })
+  }, [location.state, location.pathname, location.search, navigate])
 
   // 당첨 번호가 새로 등록되면 당첨자 다시 계산
   useDrawEvents(() => {
@@ -47,7 +70,7 @@ export default function WinnerAdmin() {
   useChatEvents(true, (m) => {
     if (m && openId === m.memberId) {
       setThread((t) => (t && !t.messages.some((x) => x.id === m.id) ? { ...t, messages: [...t.messages, m] } : t))
-      if (!m.fromAdmin) readAdminChat(m.memberId).then(loadConvs).catch(() => {})
+      if (!m.fromAdmin) readAdminChat(m.memberId).then(() => { loadConvs(); refreshUnread() }).catch(() => {})
       else loadConvs()
     } else {
       loadConvs()
@@ -70,7 +93,48 @@ export default function WinnerAdmin() {
 
   return (
     <>
-      <section className="section">
+      <section className="section" ref={chatRef} id="winner-chat">
+        <div className="container">
+          <div className="section-head">
+            <h2 className="display-sm">당첨자 채팅 {totalUnread > 0 && <span className="result-chip win">안 읽음 {totalUnread}</span>}</h2>
+            <NotifyToggle />
+            <p>당첨 기록이 있는 회원만 관리자와 1:1로 대화할 수 있습니다. 회원은 마이페이지에서 대화합니다. 메시지는 실시간으로 오가며, 관리자 누구나 답할 수 있습니다.</p>
+          </div>
+          <div className="dm-layout">
+            <div className="conv-list">
+              {!convs ? <p className="empty">불러오는 중…</p> : convs.length === 0 ? (
+                <p className="empty">아직 대화가 없습니다. 아래 당첨자 목록에서 채팅을 눌러 먼저 말을 걸 수 있어요.</p>
+              ) : convs.map((c) => (
+                <button key={c.memberId} type="button" className={'conv-item' + (openId === c.memberId ? ' on' : '')}
+                        onClick={() => setOpenId(c.memberId)}>
+                  <span className="conv-top">
+                    <b>{c.username}</b>
+                    {c.unread > 0 && <span className="unread-dot">{c.unread}</span>}
+                  </span>
+                  <span className="conv-last">{c.last.fromAdmin ? '나: ' : ''}{c.last.content}</span>
+                </button>
+              ))}
+            </div>
+            <div>
+              {!thread || thread.memberId !== openId ? (
+                <div className="feature-card"><p className="empty">대화할 회원을 고르세요.</p></div>
+              ) : (
+                <>
+                  <div className="dm-head">
+                    <b>{thread.username}</b>
+                    <span className="caption">
+                      당첨 기록: {thread.wins.length === 0 ? '없음' : thread.wins.map((w) => `${w.round}회 ${w.rank}`).join(', ')}
+                    </span>
+                  </div>
+                  <ChatThread messages={thread.messages} viewerIsAdmin onSend={send}
+                              emptyText="아직 대화가 없습니다. 당첨 축하와 안내 메시지를 먼저 보내 보세요." />
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+      <section className="section band-soft">
         <div className="container">
           <div className="section-head">
             <h2 className="display-sm">회차별 당첨자</h2>
@@ -146,46 +210,6 @@ export default function WinnerAdmin() {
         </div>
       </section>
 
-      <section className="section band-soft" ref={chatRef} id="winner-chat">
-        <div className="container">
-          <div className="section-head">
-            <h2 className="display-sm">당첨자 채팅 {totalUnread > 0 && <span className="result-chip win">안 읽음 {totalUnread}</span>}</h2>
-            <p>당첨 기록이 있는 회원만 관리자와 1:1로 대화할 수 있습니다. 회원은 마이페이지에서 대화합니다. 메시지는 실시간으로 오가며, 관리자 누구나 답할 수 있습니다.</p>
-          </div>
-          <div className="dm-layout">
-            <div className="conv-list">
-              {!convs ? <p className="empty">불러오는 중…</p> : convs.length === 0 ? (
-                <p className="empty">아직 대화가 없습니다. 위 당첨자 목록에서 채팅을 눌러 먼저 말을 걸 수 있어요.</p>
-              ) : convs.map((c) => (
-                <button key={c.memberId} type="button" className={'conv-item' + (openId === c.memberId ? ' on' : '')}
-                        onClick={() => setOpenId(c.memberId)}>
-                  <span className="conv-top">
-                    <b>{c.username}</b>
-                    {c.unread > 0 && <span className="unread-dot">{c.unread}</span>}
-                  </span>
-                  <span className="conv-last">{c.last.fromAdmin ? '나: ' : ''}{c.last.content}</span>
-                </button>
-              ))}
-            </div>
-            <div>
-              {!thread || thread.memberId !== openId ? (
-                <div className="feature-card"><p className="empty">대화할 회원을 고르세요.</p></div>
-              ) : (
-                <>
-                  <div className="dm-head">
-                    <b>{thread.username}</b>
-                    <span className="caption">
-                      당첨 기록: {thread.wins.length === 0 ? '없음' : thread.wins.map((w) => `${w.round}회 ${w.rank}`).join(', ')}
-                    </span>
-                  </div>
-                  <ChatThread messages={thread.messages} viewerIsAdmin onSend={send}
-                              emptyText="아직 대화가 없습니다. 당첨 축하와 안내 메시지를 먼저 보내 보세요." />
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
     </>
   )
 }

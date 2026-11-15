@@ -37,6 +37,12 @@ public class ChatController {
         return ResponseEntity.status(201).body(chat.sendAsMember(auth.getName(), req.content()));
     }
 
+    /** 알림용 안 읽은 메시지 수 (관리자: 회원들이 보낸 것 전체, 회원: 관리자가 보낸 것) */
+    @GetMapping("/api/chat/unread")
+    public Map<String, Object> unread(Authentication auth) {
+        return Map.of("count", chat.unreadCount(auth.getName(), AuthController.isAdmin(auth)));
+    }
+
     @PostMapping("/api/chat/me/read")
     public Map<String, Object> read(Authentication auth) {
         chat.readByMember(auth.getName());

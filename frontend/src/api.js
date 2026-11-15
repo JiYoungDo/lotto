@@ -83,6 +83,7 @@ export const deleteTicket = (id) => request(`/api/my/tickets/${id}`, { method: '
 
 // 당첨 회원 ↔ 관리자 채팅
 export const fetchMyChat = () => request('/api/chat/me')
+export const fetchChatUnread = () => request('/api/chat/unread')
 export const sendMyChat = (content) => request('/api/chat/me', json('POST', { content }))
 export const readMyChat = () => request('/api/chat/me/read', { method: 'POST' })
 export const fetchWinnerRounds = () => request('/api/admin/winners')
@@ -91,3 +92,4 @@ export const fetchConversations = () => request('/api/admin/chats')
 export const fetchThread = (memberId) => request(`/api/admin/chats/${memberId}`)
 export const sendAdminChat = (memberId, content) => request(`/api/admin/chats/${memberId}`, json('POST', { content }))
 export const readAdminChat = (memberId) => request(`/api/admin/chats/${memberId}/read`, { method: 'POST' })
+

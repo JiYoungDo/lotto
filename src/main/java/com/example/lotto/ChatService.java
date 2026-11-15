@@ -75,6 +75,13 @@ public class ChatService {
         messages.markReadByMember(member(username).getId());
     }
 
+    /** 안 읽은 메시지 수: 관리자는 모든 회원이 보낸 것, 회원은 관리자가 보낸 것 */
+    public long unreadCount(String username, boolean admin) {
+        if (admin) return messages.countByFromAdminFalseAndReadByAdminFalse();
+        return members.findByUsername(username)
+                .map(m -> messages.countByMemberIdAndFromAdminTrueAndReadByMemberFalse(m.getId())).orElse(0L);
+    }
+
     // ---------- 관리자 ----------
 
     /** 대화 목록 (최근 메시지 순) */

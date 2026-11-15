@@ -134,4 +134,16 @@ class WinnerChatTest {
         memberService.delete(gone, "admin");
         assertTrue(chats.findByMemberIdOrderByIdAsc(gone).isEmpty());
     }
+
+    @Test
+    void 알림용_안_읽은_수() throws Exception {
+        mvc.perform(get("/api/chat/unread")).andExpect(status().isUnauthorized());
+        memberSend("winner1", "질문 있어요").andExpect(status().isCreated());
+        mvc.perform(get("/api/chat/unread").with(user("admin").roles("ADMIN"))).andExpect(jsonPath("$.count").value(1));
+        mvc.perform(get("/api/chat/unread").with(user("winner1").roles("USER"))).andExpect(jsonPath("$.count").value(0));
+        adminSend(winner, "답변").andExpect(status().isCreated());   // 답장하면 관리자 쪽은 읽음
+        mvc.perform(get("/api/chat/unread").with(user("admin").roles("ADMIN"))).andExpect(jsonPath("$.count").value(0));
+        mvc.perform(get("/api/chat/unread").with(user("winner1").roles("USER"))).andExpect(jsonPath("$.count").value(1));
+        mvc.perform(get("/api/chat/unread").with(user("loser1").roles("USER"))).andExpect(jsonPath("$.count").value(0));
+    }
 }
