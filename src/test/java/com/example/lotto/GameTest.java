@@ -66,7 +66,7 @@ class GameTest {
                 .andExpect(jsonPath("$.plays").value(2));
 
         mvc.perform(get("/api/game/runner/ranking")).andExpect(status().isOk())
-                .andExpect(jsonPath("$.ranking[0].username").value("runner1"))
+                .andExpect(jsonPath("$.ranking[0].nickname").value("runner1"))
                 .andExpect(jsonPath("$.ranking[0].best").value(12));
     }
 
@@ -75,8 +75,8 @@ class GameTest {
         for (int i = 1; i <= 6; i++) submit("runner" + i, start("runner" + i), i * 3).andExpect(status().isOk());
         mvc.perform(get("/api/game/runner/ranking"))
                 .andExpect(jsonPath("$.ranking.length()").value(5))
-                .andExpect(jsonPath("$.ranking[0].username").value("runner6"))
-                .andExpect(jsonPath("$.ranking[4].username").value("runner2"));
+                .andExpect(jsonPath("$.ranking[0].nickname").value("runner6"))
+                .andExpect(jsonPath("$.ranking[4].nickname").value("runner2"));
         mvc.perform(get("/api/game/runner/me").with(user("runner1").roles("USER")))
                 .andExpect(jsonPath("$.rank").value(6));
     }

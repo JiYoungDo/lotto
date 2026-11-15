@@ -38,7 +38,7 @@ export default function Account() {
       <div className="container" style={{ maxWidth: 480 }}>
         <div className="section-head">
           <h2 className="display-sm">내 정보</h2>
-          <p><b>{me.username}</b> · {me.admin ? '관리자' : '일반 회원'}</p>
+          <p><b>{me.nickname || me.username}</b> · 아이디 {me.username} · {me.admin ? '관리자' : '일반 회원'}</p>
         </div>
         <div className="feature-card">
           <div className="title-md">비밀번호 변경</div>

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 // 미니 게임 실시간 TOP 5 순위표 (useGameScores 결과를 그대로 받음)
 export default function GameRanking({ title, scores }) {
   const { me, loggedIn, ranking, mine } = scores
-  const amFirst = loggedIn && ranking?.[0]?.username === me.username
+  const amFirst = loggedIn && ranking?.[0]?.nickname === me.nickname
   return (
     <aside className="runner-rank">
       <div className="runner-rank-head">
@@ -15,9 +15,9 @@ export default function GameRanking({ title, scores }) {
         {!ranking && <li className="caption">불러오는 중…</li>}
         {ranking && ranking.length === 0 && <li className="caption">아직 기록이 없어요. 첫 1등의 자리가 비어 있습니다.</li>}
         {ranking && ranking.map((r) => (
-          <li key={r.username} className={(loggedIn && r.username === me.username ? 'me ' : '') + 'rank-' + r.rank}>
+          <li key={r.nickname} className={(loggedIn && r.nickname === me.nickname ? 'me ' : '') + 'rank-' + r.rank}>
             <span className="rank-no">{r.rank === 1 ? '👑' : r.rank}</span>
-            <span className="rank-name">{r.username}</span>
+            <span className="rank-name">{r.nickname}</span>
             <span className="rank-score num">{r.best.toLocaleString()}</span>
           </li>
         ))}

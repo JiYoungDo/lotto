@@ -10,7 +10,7 @@ export default function CommunityAdmin() {
   const [q, setQ] = useState('')
 
   const onDelete = async (p) => {
-    if (!window.confirm(`${p.author}님의 글을 지울까요?\n\n${p.win ? `[당첨 인증 ${p.win.round}회 ${p.win.rank}] ` : ''}${p.content.slice(0, 80)}`)) return
+    if (!window.confirm(`${p.nickname}님의 글을 지울까요?\n\n${p.win ? `[당첨 인증 ${p.win.round}회 ${p.win.rank}] ` : ''}${p.content.slice(0, 80)}`)) return
     try { await deletePost(p.id); removeLocal(p.id); setMsg('글을 지웠습니다.') } catch (e) { setMsg(e.message) }
   }
   const onClear = async () => {
@@ -19,8 +19,8 @@ export default function CommunityAdmin() {
   }
 
   const shown = (posts || []).slice().reverse()
-    .filter((p) => !q || p.author.toLowerCase().includes(q.toLowerCase()) || p.content.toLowerCase().includes(q.toLowerCase()))
-  const authors = new Set((posts || []).map((p) => p.author)).size
+    .filter((p) => !q || p.nickname.toLowerCase().includes(q.toLowerCase()) || p.content.toLowerCase().includes(q.toLowerCase()))
+  const authors = new Set((posts || []).map((p) => p.nickname)).size
 
   return (
     <section className="section">
@@ -51,7 +51,7 @@ export default function CommunityAdmin() {
                   {shown.map((p) => (
                     <tr key={p.id}>
                       <td className="num muted">{formatTime(p.createdAt)}</td>
-                      <td className="title-md" style={{ fontSize: 15 }}>{p.author}{p.admin && <span className="caption"> · 관리자</span>}</td>
+                      <td className="title-md" style={{ fontSize: 15 }}>{p.nickname}{p.admin && <span className="caption"> · 관리자</span>}</td>
                       <td className="post-cell">
                         {p.win && <span className="role-badge win" style={{ marginRight: 6 }}>당첨 인증 · {p.win.round}회 {p.win.rank}</span>}
                         {p.content}

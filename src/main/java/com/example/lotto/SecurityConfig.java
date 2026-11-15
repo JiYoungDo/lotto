@@ -32,7 +32,7 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(auth -> auth
                 .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()   // 실시간 스트림(SSE)·오류 응답
-                .requestMatchers(HttpMethod.GET, "/api/draws", "/api/draws/pool", "/api/draws/stream", "/api/analysis", "/api/auth/me", "/api/community/**",
+                .requestMatchers(HttpMethod.GET, "/api/draws", "/api/draws/pool", "/api/draws/stream", "/api/analysis", "/api/auth/me", "/api/auth/available", "/api/community/**",
                         "/api/game/*/ranking", "/api/game/stream").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/signup").permitAll()
                 .requestMatchers("/api/auth/password", "/api/community/**", "/api/my/**", "/api/chat/**", "/api/game/**").authenticated()   // 로그인한 회원

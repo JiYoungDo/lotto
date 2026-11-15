@@ -111,11 +111,11 @@ export default function Community() {
             {!posts && !error && <p className="empty">불러오는 중…</p>}
             {posts && posts.length === 0 && <p className="empty">아직 글이 없습니다. 첫 글을 남겨 보세요.</p>}
             {posts && posts.map((p) => {
-              const mine = me?.loggedIn && p.author === me.username
+              const mine = me?.loggedIn && p.nickname === me.nickname
               return (
                 <div key={p.id} className={'chat-msg' + (mine ? ' mine' : '')}>
                   <div className="chat-meta">
-                    <b>{p.author}</b>
+                    <b>{p.nickname}</b>
                     {p.admin && <span className="role-badge admin">관리자</span>}
                     <span className="num">{formatTime(p.createdAt)}</span>
                     {(mine || me?.admin) && (

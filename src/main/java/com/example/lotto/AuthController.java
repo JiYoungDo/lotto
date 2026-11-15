@@ -6,6 +6,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -18,13 +19,13 @@ public class AuthController {
 
     public AuthController(MemberService members) { this.members = members; }
 
-    public record SignUpRequest(String username, String password, Boolean adult) {}   // adult: 만 19세 이상 확인 (필수)
+    public record SignUpRequest(String username, String nickname, String password, Boolean adult) {}   // adult: 만 19세 이상 확인 (필수)
     public record PasswordRequest(String currentPassword, String newPassword) {}
 
     /** 회원가입: 일반 회원(USER)으로 DB에 저장 */
     @PostMapping("/signup")
     public ResponseEntity<Map<String, Object>> signUp(@RequestBody SignUpRequest req) {
-        Member m = members.signUp(req.username(), req.password(), Boolean.TRUE.equals(req.adult()));
+        Member m = members.signUp(req.username(), req.nickname(), req.password(), Boolean.TRUE.equals(req.adult()));
         return ResponseEntity.status(201).body(Map.of("message", m.getUsername() + "님, 가입되었습니다."));
     }
 
@@ -41,7 +42,22 @@ public class AuthController {
         csrf.getToken();   // 토큰을 읽어야 XSRF-TOKEN 쿠키가 응답에 실린다
         boolean loggedIn = isLoggedIn(auth);
         boolean admin = loggedIn && isAdmin(auth);
-        return Map.of("loggedIn", loggedIn, "admin", admin, "username", loggedIn ? auth.getName() : "");
+        String nickname = loggedIn ? members.nicknames(List.of(auth.getName())).getOrDefault(auth.getName(), auth.getName()) : "";
+        return Map.of("loggedIn", loggedIn, "admin", admin, "username", loggedIn ? auth.getName() : "", "nickname", nickname);
+    }
+
+    /** 가입 화면에서 아이디·닉네임을 쓸 수 있는지 미리 확인 (둘 중 보낸 것만 확인) */
+    @GetMapping("/available")
+    public Map<String, Object> available(@RequestParam(required = false) String username,
+                                         @RequestParam(required = false) String nickname) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        if (username != null) out.put("username", check(members.usernameProblem(username)));
+        if (nickname != null) out.put("nickname", check(members.nicknameProblem(nickname)));
+        return out;
+    }
+
+    private static Map<String, Object> check(String problem) {
+        return problem == null ? Map.of("ok", true) : Map.of("ok", false, "message", problem);
     }
 
     static boolean isLoggedIn(Authentication auth) {

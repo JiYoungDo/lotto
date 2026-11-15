@@ -123,7 +123,7 @@ class AdminCommunityTest {
         mvc.perform(get("/api/community/posts")).andExpect(status().isOk()).andExpect(jsonPath("$.max").value(100));
         mvc.perform(post("/api/community/posts").with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"content\":\"hi\"}"))
                 .andExpect(status().isUnauthorized());
-        write("안녕하세요", "alice").andExpect(status().isCreated()).andExpect(jsonPath("$.author").value("alice"));
+        write("안녕하세요", "alice").andExpect(status().isCreated()).andExpect(jsonPath("$.nickname").value("alice"));
         mvc.perform(get("/api/community/posts")).andExpect(jsonPath("$.posts[0].content").value("안녕하세요"));
     }
 

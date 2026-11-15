@@ -38,10 +38,14 @@ public class GameService {
 
     public List<Map<String, Object>> ranking(String game) {
         rule(game);
+        List<GameScore> top = scores.findTop5ByGameAndBestGreaterThanOrderByBestDescBestAtAsc(game, 0);
+        // 순위에는 로그인 아이디 대신 지금의 닉네임을 보여 준다
+        Map<Long, String> names = new HashMap<>();
+        for (Member m : members.findAllById(top.stream().map(GameScore::getMemberId).toList())) names.put(m.getId(), m.getNickname());
         List<Map<String, Object>> out = new ArrayList<>();
         int rank = 1;
-        for (GameScore g : scores.findTop5ByGameAndBestGreaterThanOrderByBestDescBestAtAsc(game, 0)) {
-            out.add(Map.of("rank", rank++, "username", g.getUsername(), "best", g.getBest()));
+        for (GameScore g : top) {
+            out.add(Map.of("rank", rank++, "nickname", names.getOrDefault(g.getMemberId(), MemberService.GONE), "best", g.getBest()));
         }
         return out;
     }

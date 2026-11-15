@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { AuthContext } from '../auth.js'
 import { fetchMe, login, logout } from '../api.js'
 
-const GUEST = { loggedIn: false, admin: false, username: '' }
+const GUEST = { loggedIn: false, admin: false, username: '', nickname: '' }
 
 export default function AuthProvider({ children }) {
   const [me, setMe] = useState(null) // null = 아직 확인 중

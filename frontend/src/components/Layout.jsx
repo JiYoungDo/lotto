@@ -37,7 +37,7 @@ export default function Layout() {
                         title={unread > 0 ? `안 읽은 채팅 ${unread}개` : '채팅 알림'} aria-label={`채팅 알림, 안 읽은 메시지 ${unread}개`}>
                     🔔{unread > 0 && <span className="bell-count">{unread > 99 ? '99+' : unread}</span>}
                   </Link>
-                  <Link className="nav-user" to="/account" title="내 정보">{me.username}{admin && <span className="badge">관리자</span>}</Link>
+                  <Link className="nav-user" to="/account" title={`내 정보 (아이디 ${me.username})`}>{me.nickname || me.username}{admin && <span className="badge">관리자</span>}</Link>
                   <button className="btn btn-secondary btn-sm" type="button" onClick={onSignOut}>로그아웃</button>
                 </>
               ) : (

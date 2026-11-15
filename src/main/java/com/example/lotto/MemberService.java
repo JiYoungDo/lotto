@@ -31,6 +31,9 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(MemberService.class);
     private static final Pattern USERNAME = Pattern.compile("^[a-zA-Z0-9_]{4,20}$");
+    private static final Pattern NICKNAME = Pattern.compile("^[가-힣a-zA-Z0-9_]{2,12}$");
+    /** 일반 회원이 닉네임에 쓸 수 없는 말 (관리자 사칭 방지) */
+    private static final List<String> RESERVED = List.of("관리자", "운영자", "admin", "운영진", "lottolab");
     private static final DateTimeFormatter DT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -58,19 +61,41 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
 
     /** 가입 규칙을 어기면 IllegalArgumentException (메시지는 화면에 그대로 보여줌) */
     @Transactional
-    public Member signUp(String username, String password, boolean adultConfirmed) {
+    public Member signUp(String username, String nickname, String password, boolean adultConfirmed) {
         if (!adultConfirmed) throw new IllegalArgumentException("만 19세 이상만 가입할 수 있습니다. 나이 확인에 체크해 주세요.");
         String name = username == null ? "" : username.trim();
-        if (!USERNAME.matcher(name).matches()) {
-            throw new IllegalArgumentException("아이디는 영문·숫자·밑줄(_)로 4~20자여야 합니다.");
-        }
+        String nick = nickname == null ? "" : nickname.trim();
+        String problem = usernameProblem(name);
+        if (problem == null) problem = nicknameProblem(nick);
+        if (problem != null) throw new IllegalArgumentException(problem);
         checkPassword(password);
-        if (repo.existsByUsername(name)) {
-            throw new IllegalArgumentException("이미 사용 중인 아이디입니다.");
-        }
         Member m = new Member(name, encoder.encode(password), Member.Role.USER);
+        m.changeNickname(nick);
         m.confirmAdult();
-        return repo.save(m);
+        try {
+            return repo.saveAndFlush(m);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // 동시에 같은 아이디·닉네임으로 가입한 경우 (DB 고유 제약)
+            throw new IllegalArgumentException("방금 다른 회원이 같은 아이디나 닉네임으로 가입했습니다. 다른 값으로 다시 시도하세요.");
+        }
+    }
+
+    /** 아이디를 쓸 수 없으면 이유, 쓸 수 있으면 null. 대소문자만 다른 아이디도 중복으로 봄 */
+    public String usernameProblem(String username) {
+        String name = username == null ? "" : username.trim();
+        if (!USERNAME.matcher(name).matches()) return "아이디는 영문·숫자·밑줄(_)로 4~20자여야 합니다.";
+        if (repo.existsByUsernameIgnoreCase(name)) return "이미 사용 중인 아이디입니다.";
+        return null;
+    }
+
+    /** 닉네임을 쓸 수 없으면 이유, 쓸 수 있으면 null. 대소문자만 다른 닉네임도 중복으로 봄 */
+    public String nicknameProblem(String nickname) {
+        String nick = nickname == null ? "" : nickname.trim();
+        if (!NICKNAME.matcher(nick).matches()) return "닉네임은 한글·영문·숫자·밑줄(_)로 2~12자여야 합니다 (띄어쓰기 불가).";
+        String lower = nick.toLowerCase(Locale.ROOT);
+        if (RESERVED.stream().anyMatch(lower::contains)) return "관리자로 오해할 수 있는 닉네임은 쓸 수 없습니다.";
+        if (repo.existsByNicknameIgnoreCase(nick)) return "이미 사용 중인 닉네임입니다.";
+        return null;
     }
 
     private static void checkPassword(String password) {
@@ -150,6 +175,7 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("id", m.getId());
             row.put("username", m.getUsername());
+            row.put("nickname", m.getNickname());
             row.put("role", m.getRole().name());
             row.put("suspended", m.isSuspended());
             row.put("createdAt", m.getCreatedAt().format(DT));
@@ -216,9 +242,23 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
 
     // ---------- 서버 시작 시 관리자 계정 맞추기 ----------
 
+    /** 화면에 보일 이름(닉네임). 없는 회원이면 "(탈퇴한 회원)" */
+    public Map<String, String> nicknames(Collection<String> usernames) {
+        Map<String, String> out = new HashMap<>();
+        for (Member m : repo.findByUsernameIn(usernames)) out.put(m.getUsername(), m.getNickname());
+        return out;
+    }
+
+    public static final String GONE = "(탈퇴한 회원)";
+
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
+        // 닉네임 기능 전에 가입한 회원은 아이디를 닉네임으로 (아이디가 서로 다르니 겹치지 않음)
+        List<Member> noNick = repo.findByNicknameIsNull();
+        for (Member m : noNick) m.changeNickname(m.getUsername());
+        if (!noNick.isEmpty()) log.info("닉네임이 없던 회원 {}명의 닉네임을 아이디로 정했습니다.", noNick.size());
+
         boolean noPassword = adminPassword == null || adminPassword.isBlank();
         Member admin = repo.findByUsername(adminUsername).orElse(null);
 

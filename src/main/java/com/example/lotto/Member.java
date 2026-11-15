@@ -37,6 +37,9 @@ public class Member {
 
     private LocalDateTime adultConfirmedAt;   // 가입할 때 "만 19세 이상" 확인한 시각 (이 기능 전에 가입한 회원은 null)
 
+    @Column(unique = true, length = 20)
+    private String nickname;              // 커뮤니티·게임 순위에 보이는 이름 (다른 회원과 겹치지 않음)
+
     protected Member() {}
 
     public Member(String username, String encodedPassword, Role role) {
@@ -45,6 +48,7 @@ public class Member {
         this.role = role;
         this.createdAt = LocalDateTime.now(ZONE);
         this.suspended = false;
+        this.nickname = username;   // 따로 정하지 않으면 아이디와 같게 (가입할 때는 회원이 정한 닉네임으로 바꿈)
     }
 
     public Long getId() { return id; }
@@ -56,6 +60,10 @@ public class Member {
     public boolean isSuspended() { return Boolean.TRUE.equals(suspended); }
     public LocalDateTime getLastLoginAt() { return lastLoginAt; }
     public LocalDateTime getAdultConfirmedAt() { return adultConfirmedAt; }
+    /** 화면에 보일 이름. 닉네임 기능 전에 가입해 아직 닉네임이 없으면 아이디 */
+    public String getNickname() { return nickname != null ? nickname : username; }
+    public boolean hasNickname() { return nickname != null; }
+    public void changeNickname(String nickname) { this.nickname = nickname; }
     public void confirmAdult() { this.adultConfirmedAt = LocalDateTime.now(ZONE); }
 
     public void setSuspended(boolean suspended) { this.suspended = suspended; }

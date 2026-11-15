@@ -19,19 +19,24 @@ public class CommunityService {
     private final PostRepository repo;
     private final CommunityHub hub;
     private final MemberRepository members;
+    private final MemberService memberService;
     private final WinnerService winners;
     private final Map<String, Long> lastPostAt = new ConcurrentHashMap<>();
 
-    public CommunityService(PostRepository repo, CommunityHub hub, MemberRepository members, WinnerService winners) {
+    public CommunityService(PostRepository repo, CommunityHub hub, MemberRepository members, MemberService memberService,
+                            WinnerService winners) {
         this.repo = repo;
         this.hub = hub;
         this.members = members;
+        this.memberService = memberService;
         this.winners = winners;
     }
 
     /** 최신 100개를 오래된 글 → 최신 글 순서로 */
     public List<Map<String, Object>> recent() {
-        List<Map<String, Object>> list = new ArrayList<>(repo.findTop100ByOrderByIdDesc().stream().map(CommunityService::dto).toList());
+        List<Post> posts = repo.findTop100ByOrderByIdDesc();
+        Map<String, String> names = memberService.nicknames(posts.stream().map(Post::getAuthor).distinct().toList());
+        List<Map<String, Object>> list = new ArrayList<>(posts.stream().map(p -> dto(p, names)).toList());
         Collections.reverse(list);
         return list;
     }
@@ -69,7 +74,7 @@ public class CommunityService {
         }
         Post saved = repo.save(post);
         prune();
-        Map<String, Object> dto = dto(saved);
+        Map<String, Object> dto = dto(saved, memberService.nicknames(List.of(author)));
         hub.broadcast("post", dto);
         return dto;
     }
@@ -103,10 +108,11 @@ public class CommunityService {
 
     public long count() { return repo.count(); }
 
-    private static Map<String, Object> dto(Post p) {
+    /** 공개 응답: 로그인 아이디는 내보내지 않고 닉네임만 (names = 아이디 → 닉네임) */
+    private static Map<String, Object> dto(Post p, Map<String, String> names) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", p.getId());
-        m.put("author", p.getAuthor());
+        m.put("nickname", names.getOrDefault(p.getAuthor(), MemberService.GONE));
         m.put("admin", p.isAuthorAdmin());
         m.put("content", p.getContent());
         m.put("createdAt", p.getCreatedAt().format(DT));

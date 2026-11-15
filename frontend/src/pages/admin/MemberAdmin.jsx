@@ -74,7 +74,7 @@ export default function MemberAdmin({ me }) {
   }[period] || ''
 
   const shown = (list || []).filter((m) =>
-    (!q || m.username.toLowerCase().includes(q.trim().toLowerCase())) &&
+    (!q || [m.username, m.nickname].some((v) => v.toLowerCase().includes(q.trim().toLowerCase()))) &&
     (!since || m.createdDate >= since) &&
     (filter === 'all' || (filter === 'suspended' ? m.suspended : m.role === filter)))
 
@@ -122,7 +122,7 @@ export default function MemberAdmin({ me }) {
               ) : (
                 <ul className="name-list">
                   {weekJoined.map((m) => (
-                    <li key={m.id}><b>{m.username}</b><span className="num muted">{m.createdAt.slice(5)}</span></li>
+                    <li key={m.id}><b>{m.nickname}</b> <span className="caption">{m.username}</span><span className="num muted">{m.createdAt.slice(5)}</span></li>
                   ))}
                 </ul>
               )}
@@ -151,8 +151,8 @@ export default function MemberAdmin({ me }) {
 
           <div className="feature-card">
             <div className="toolbar">
-              <input className="input" type="search" placeholder="아이디 검색" value={q} onChange={(e) => setQ(e.target.value)}
-                     style={{ maxWidth: 220 }} aria-label="아이디 검색" />
+              <input className="input" type="search" placeholder="아이디·닉네임 검색" value={q} onChange={(e) => setQ(e.target.value)}
+                     style={{ maxWidth: 220 }} aria-label="아이디·닉네임 검색" />
               <div className="seg">
                 {PERIODS.map(([k, label]) => (
                   <button key={k} type="button" className={period === k ? 'on' : ''} onClick={() => setPeriod(k)}>{label}</button>
@@ -174,7 +174,7 @@ export default function MemberAdmin({ me }) {
               ) : (
                 <table className="list-table">
                   <thead>
-                    <tr><th>아이디</th><th>권한</th><th>상태</th><th>가입일</th><th>최근 로그인</th><th className="r">관리</th></tr>
+                    <tr><th>아이디</th><th>닉네임</th><th>권한</th><th>상태</th><th>가입일</th><th>최근 로그인</th><th className="r">관리</th></tr>
                   </thead>
                   <tbody>
                     {shown.map((m) => {
@@ -187,6 +187,7 @@ export default function MemberAdmin({ me }) {
                             {m.protected && <span className="caption"> · 기본 관리자</span>}
                             {self && !m.protected && <span className="caption"> · 나</span>}
                           </td>
+                          <td>{m.nickname}</td>
                           <td><span className={'role-badge' + (m.role === 'ADMIN' ? ' admin' : '')}>{m.role === 'ADMIN' ? '관리자' : '일반 회원'}</span></td>
                           <td>{m.suspended ? <span className="role-badge danger">정지</span> : <span className="muted">정상</span>}</td>
                           <td className="num muted">{m.createdAt}</td>
