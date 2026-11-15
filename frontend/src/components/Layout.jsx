@@ -18,7 +18,7 @@ export default function Layout() {
       <header className="top-nav">
         <div className="container nav-inner">
           <Link className="wordmark" to="/draws">
-            <img src="/logo.svg" alt="LottoLab" height="28" />
+            <img src="/logo.svg" alt="로또 연구소" height="28" />
             <span className="wordmark-tag">번호 기록·분석 도구</span>
           </Link>
           <nav className="nav-links">
@@ -53,7 +53,7 @@ export default function Layout() {
       <Outlet />
       <footer className="footer-light">
         <div className="container">
-          <p><b className="footer-tag">LottoLab · 번호 기록·분석 도구</b></p>
+          <p><b className="footer-tag">로또 연구소 · 번호 기록·분석 도구</b></p>
           <p>회차별 번호 출현 횟수를 분석해서 내 가설이 맞았는지 기록하는 개인 분석 도구입니다.</p>
           <div className="legal-band">
             <Disclaimer compact />

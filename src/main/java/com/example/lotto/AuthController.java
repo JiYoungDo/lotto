@@ -21,6 +21,14 @@ public class AuthController {
 
     public record SignUpRequest(String username, String nickname, String password, Boolean adult) {}   // adult: 만 19세 이상 확인 (필수)
     public record PasswordRequest(String currentPassword, String newPassword) {}
+    public record NicknameRequest(String nickname) {}
+
+    /** 내 닉네임 변경 (로그인한 회원) */
+    @PatchMapping("/nickname")
+    public Map<String, Object> changeNickname(Authentication auth, @RequestBody NicknameRequest req) {
+        String nick = members.changeOwnNickname(auth.getName(), req.nickname());
+        return Map.of("message", "닉네임을 '" + nick + "'(으)로 바꿨습니다.", "nickname", nick);
+    }
 
     /** 회원가입: 일반 회원(USER)으로 DB에 저장 */
     @PostMapping("/signup")
@@ -49,10 +57,12 @@ public class AuthController {
     /** 가입 화면에서 아이디·닉네임을 쓸 수 있는지 미리 확인 (둘 중 보낸 것만 확인) */
     @GetMapping("/available")
     public Map<String, Object> available(@RequestParam(required = false) String username,
-                                         @RequestParam(required = false) String nickname) {
+                                         @RequestParam(required = false) String nickname, Authentication auth) {
+        // 로그인한 회원이 닉네임을 바꿀 때는 본인 닉네임을 중복으로 보지 않음
+        Member self = isLoggedIn(auth) ? members.find(auth.getName()).orElse(null) : null;
         Map<String, Object> out = new LinkedHashMap<>();
         if (username != null) out.put("username", check(members.usernameProblem(username)));
-        if (nickname != null) out.put("nickname", check(members.nicknameProblem(nickname)));
+        if (nickname != null) out.put("nickname", check(members.nicknameProblem(nickname, self)));
         return out;
     }
 

@@ -66,7 +66,7 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
         String name = username == null ? "" : username.trim();
         String nick = nickname == null ? "" : nickname.trim();
         String problem = usernameProblem(name);
-        if (problem == null) problem = nicknameProblem(nick);
+        if (problem == null) problem = nicknameProblem(nick, null);
         if (problem != null) throw new IllegalArgumentException(problem);
         checkPassword(password);
         Member m = new Member(name, encoder.encode(password), Member.Role.USER);
@@ -88,14 +88,36 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
         return null;
     }
 
-    /** 닉네임을 쓸 수 없으면 이유, 쓸 수 있으면 null. 대소문자만 다른 닉네임도 중복으로 봄 */
-    public String nicknameProblem(String nickname) {
+    /**
+     * 닉네임을 쓸 수 없으면 이유, 쓸 수 있으면 null. 대소문자만 다른 닉네임도 중복으로 봄.
+     * self: 닉네임을 바꾸려는 본인 (가입할 때는 null). 본인의 지금 닉네임은 중복으로 보지 않고, 관리자는 '관리자' 같은 말도 쓸 수 있음
+     */
+    public String nicknameProblem(String nickname, Member self) {
         String nick = nickname == null ? "" : nickname.trim();
         if (!NICKNAME.matcher(nick).matches()) return "닉네임은 한글·영문·숫자·밑줄(_)로 2~12자여야 합니다 (띄어쓰기 불가).";
         String lower = nick.toLowerCase(Locale.ROOT);
-        if (RESERVED.stream().anyMatch(lower::contains)) return "관리자로 오해할 수 있는 닉네임은 쓸 수 없습니다.";
-        if (repo.existsByNicknameIgnoreCase(nick)) return "이미 사용 중인 닉네임입니다.";
+        boolean admin = self != null && self.getRole() == Member.Role.ADMIN;
+        if (!admin && RESERVED.stream().anyMatch(lower::contains)) return "관리자로 오해할 수 있는 닉네임은 쓸 수 없습니다.";
+        boolean mine = self != null && self.getNickname().equalsIgnoreCase(nick);
+        if (!mine && repo.existsByNicknameIgnoreCase(nick)) return "이미 사용 중인 닉네임입니다.";
         return null;
+    }
+
+    /** 내 닉네임 변경. 커뮤니티 글·게임 순위에는 바뀐 닉네임이 바로 보인다 (이름을 따로 저장하지 않고 그때그때 찾음) */
+    @Transactional
+    public String changeOwnNickname(String username, String nickname) {
+        Member m = repo.findByUsername(username).orElseThrow(() -> new NoSuchElementException("회원을 찾을 수 없습니다."));
+        String nick = nickname == null ? "" : nickname.trim();
+        if (m.getNickname().equals(nick)) throw new IllegalArgumentException("지금 쓰는 닉네임과 같습니다.");
+        String problem = nicknameProblem(nick, m);
+        if (problem != null) throw new IllegalArgumentException(problem);
+        m.changeNickname(nick);
+        try {
+            repo.saveAndFlush(m);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new IllegalArgumentException("방금 다른 회원이 같은 닉네임을 가져갔습니다. 다른 닉네임으로 다시 시도하세요.");
+        }
+        return nick;
     }
 
     private static void checkPassword(String password) {
@@ -241,6 +263,8 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
     }
 
     // ---------- 서버 시작 시 관리자 계정 맞추기 ----------
+
+    public Optional<Member> find(String username) { return repo.findByUsername(username); }
 
     /** 화면에 보일 이름(닉네임). 없는 회원이면 "(탈퇴한 회원)" */
     public Map<String, String> nicknames(Collection<String> usernames) {

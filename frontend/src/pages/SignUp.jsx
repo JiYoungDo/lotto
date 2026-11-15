@@ -1,30 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { checkAvailable, signUp } from '../api.js'
+import { signUp } from '../api.js'
 import { useAuth } from '../auth.js'
 import Disclaimer from '../components/Disclaimer.jsx'
+import AvailHint from '../components/AvailHint.jsx'
+import { NICKNAME_RE, useAvailability } from '../availability.js'
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{4,20}$/
-const NICKNAME_RE = /^[가-힣a-zA-Z0-9_]{2,12}$/
-
-/**
- * 아이디·닉네임 중복 확인: 입력을 멈추고 0.4초 뒤 서버에 물어봄.
- * 결과: null(확인 전·형식 오류) | { value, ok, message }
- */
-function useAvailability(field, value, formatOk) {
-  const [result, setResult] = useState(null)
-  useEffect(() => {
-    if (!formatOk) return
-    let alive = true
-    const t = setTimeout(() => {
-      checkAvailable(field, value)
-        .then((d) => alive && setResult({ value, ...d[field] }))
-        .catch(() => {})
-    }, 400)
-    return () => { alive = false; clearTimeout(t) }
-  }, [field, value, formatOk])
-  return formatOk && result?.value === value ? result : null
-}
 
 // 회원가입: 가입하면 DB(member 테이블)에 일반 회원으로 저장되고 바로 로그인됩니다.
 export default function SignUp() {
@@ -111,12 +93,4 @@ export default function SignUp() {
       </div>
     </section>
   )
-}
-
-// 입력칸 아래 안내: 형식 규칙 → 중복 확인 결과(사용 가능/사용 중)
-function AvailHint({ input, formatOk, free, rule, okText }) {
-  if (input && formatOk && free) {
-    return <p className={'field-hint ' + (free.ok ? 'good' : 'bad')}>{free.ok ? okText : free.message}</p>
-  }
-  return <p className={'field-hint' + (input && !formatOk ? ' bad' : '')}>{rule}</p>
 }

@@ -6,7 +6,7 @@ import { useChatEvents } from '../chat.js'
 import { fetchChatUnread } from '../api.js'
 
 const TOAST_MS = 7000
-const BASE_TITLE = 'LottoLab · 번호 기록·분석 도구'
+const BASE_TITLE = '로또 연구소 · 번호 기록·분석 도구'
 const supported = typeof window !== 'undefined' && 'Notification' in window
 
 /**

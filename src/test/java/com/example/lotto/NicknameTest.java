@@ -123,4 +123,48 @@ class NicknameTest {
         mvc.perform(get("/api/auth/me").with(user("secret_id9").roles("USER")))
                 .andExpect(jsonPath("$.nickname").value("공개이름"));
     }
+
+    private ResultActions changeNick(String who, String nickname) throws Exception {
+        return mvc.perform(patch("/api/auth/nickname").with(csrf()).with(user(who).roles("USER"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"nickname\":\"" + nickname + "\"}"));
+    }
+
+    @Test
+    void 내_정보에서_닉네임을_바꾸면_커뮤니티와_순위에_바로_보인다() throws Exception {
+        signUp("changer_1", "옛날이름").andExpect(status().isCreated());
+        mvc.perform(post("/api/community/posts").with(csrf()).with(user("changer_1").roles("USER"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"content\":\"전에 쓴 글\"}")).andExpect(status().isCreated());
+
+        changeNick("changer_1", "새이름").andExpect(status().isOk()).andExpect(jsonPath("$.nickname").value("새이름"));
+        assertEquals("새이름", members.findByUsername("changer_1").orElseThrow().getNickname());
+        mvc.perform(get("/api/community/posts")).andExpect(jsonPath("$.posts[0].nickname").value("새이름"));   // 지난 글도 새 이름
+        mvc.perform(get("/api/auth/me").with(user("changer_1").roles("USER"))).andExpect(jsonPath("$.nickname").value("새이름"));
+
+        // 예전 닉네임은 다른 사람이 쓸 수 있게 풀림
+        mvc.perform(get("/api/auth/available").param("nickname", "옛날이름")).andExpect(jsonPath("$.nickname.ok").value(true));
+    }
+
+    @Test
+    void 닉네임_변경도_중복_형식_사칭_규칙을_지킨다() throws Exception {
+        signUp("changer_2", "이름하나").andExpect(status().isCreated());
+        signUp("changer_3", "이름둘").andExpect(status().isCreated());
+
+        changeNick("changer_2", "이름둘").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("이미 사용 중인 닉네임입니다."));
+        changeNick("changer_2", "이름하나").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("지금 쓰는 닉네임과 같습니다."));
+        changeNick("changer_2", "a").andExpect(status().isBadRequest());
+        changeNick("changer_2", "관리자다").andExpect(status().isBadRequest());
+
+        // 본인 닉네임은 중복으로 보지 않음 → 대소문자만 바꾸기 가능
+        signUp("changer_4", "sunny").andExpect(status().isCreated());
+        mvc.perform(get("/api/auth/available").param("nickname", "SUNNY").with(user("changer_4").roles("USER")))
+                .andExpect(jsonPath("$.nickname.ok").value(true));
+        mvc.perform(get("/api/auth/available").param("nickname", "SUNNY"))   // 다른 사람(비회원)에게는 사용 중
+                .andExpect(jsonPath("$.nickname.ok").value(false));
+        changeNick("changer_4", "Sunny").andExpect(status().isOk());
+
+        mvc.perform(patch("/api/auth/nickname").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"nickname\":\"몰래\"}")).andExpect(status().isUnauthorized());
+    }
 }
