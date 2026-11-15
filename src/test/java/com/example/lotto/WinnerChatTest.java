@@ -34,12 +34,14 @@ class WinnerChatTest {
     @Autowired ChatMessageRepository chats;
     @Autowired PasswordEncoder encoder;
     @Autowired MemberService memberService;
+    @Autowired PostRepository posts;
 
     Long winner, loser;
 
     @BeforeEach
     void setUp() {
         chats.deleteAllInBatch();
+        posts.deleteAllInBatch();
         tickets.deleteAllInBatch();
         draws.deleteAllInBatch();
         for (String n : new String[]{"winner1", "loser1"}) {
@@ -145,5 +147,53 @@ class WinnerChatTest {
         mvc.perform(get("/api/chat/unread").with(user("admin").roles("ADMIN"))).andExpect(jsonPath("$.count").value(0));
         mvc.perform(get("/api/chat/unread").with(user("winner1").roles("USER"))).andExpect(jsonPath("$.count").value(1));
         mvc.perform(get("/api/chat/unread").with(user("loser1").roles("USER"))).andExpect(jsonPath("$.count").value(0));
+    }
+
+    // ---------- 커뮤니티 당첨 인증 ----------
+
+    private ResultActions share(String who, String content, Long ticketId) throws Exception {
+        return mvc.perform(post("/api/community/posts").with(csrf()).with(user(who).roles("USER"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"content\":\"" + content + "\",\"ticketId\":" + ticketId + "}"));
+    }
+
+    private Long ticketOf(Long memberId, int matchFirst) {
+        return tickets.findByMemberIdOrderByRoundDescIdAsc(memberId).stream()
+                .filter(t -> t.getRound() == 10 && t.numbers().get(3) == matchFirst).findFirst().orElseThrow().getId();
+    }
+
+    @Test
+    void 당첨_회원은_자기_당첨_번호로_인증글을_올린다() throws Exception {
+        mvc.perform(get("/api/my/wins").with(user("winner1").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.wins.length()").value(2))
+                .andExpect(jsonPath("$.wins[0].ticketId").isNumber());
+
+        Long fourth = ticketOf(winner, 4);   // 1,2,3,4,20,30 → 4등
+        share("winner1", "", fourth)          // 메시지 없이 인증만 올려도 된다
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.content").value(""))
+                .andExpect(jsonPath("$.win.round").value(10))
+                .andExpect(jsonPath("$.win.rank").value("4등"))
+                .andExpect(jsonPath("$.win.matched.length()").value(4))
+                .andExpect(jsonPath("$.win.winning[5]").value(6));
+
+        // 번호를 지워도 인증 글은 그대로 남는다
+        tickets.deleteById(fourth);
+        mvc.perform(get("/api/community/posts"))
+                .andExpect(jsonPath("$.posts[0].win.rank").value("4등"));
+    }
+
+    @Test
+    void 남의_번호나_낙첨_번호로는_인증할_수_없다() throws Exception {
+        Long winnersTicket = ticketOf(winner, 4);
+        share("loser1", "내 거임", winnersTicket).andExpect(status().isBadRequest());
+
+        Long losing = ticketOf(loser, 41);   // 2개 일치 → 낙첨
+        share("loser1", "됐다", losing).andExpect(status().isBadRequest());
+
+        mvc.perform(get("/api/my/wins").with(user("loser1").roles("USER"))).andExpect(jsonPath("$.wins.length()").value(0));
+        mvc.perform(get("/api/my/wins")).andExpect(status().isUnauthorized());
+        assertEquals(0, posts.count());
     }
 }

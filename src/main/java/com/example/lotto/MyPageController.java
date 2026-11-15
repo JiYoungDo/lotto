@@ -12,8 +12,14 @@ import java.util.Map;
 public class MyPageController {
 
     private final TicketService tickets;
+    private final WinnerService winners;
+    private final MemberRepository members;
 
-    public MyPageController(TicketService tickets) { this.tickets = tickets; }
+    public MyPageController(TicketService tickets, WinnerService winners, MemberRepository members) {
+        this.tickets = tickets;
+        this.winners = winners;
+        this.members = members;
+    }
 
     public record MemoRequest(String memo) {}
 
@@ -28,6 +34,13 @@ public class MyPageController {
     @GetMapping("/tickets")
     public Map<String, Object> mine(Authentication auth) {
         return tickets.mine(auth.getName());
+    }
+
+    /** 내 당첨 기록 (커뮤니티 당첨 인증에서 고를 목록) */
+    @GetMapping("/wins")
+    public Map<String, Object> wins(Authentication auth) {
+        Long id = members.findByUsername(auth.getName()).map(Member::getId).orElse(null);
+        return Map.of("wins", id == null ? java.util.List.of() : winners.winsOf(id));
     }
 
     @PostMapping("/tickets")

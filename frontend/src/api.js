@@ -69,7 +69,8 @@ export const deleteMember = (id) => request(`/api/admin/members/${id}`, { method
 
 // 커뮤니티
 export const fetchPosts = () => request('/api/community/posts')
-export const writePost = (content) => request('/api/community/posts', json('POST', { content }))
+export const writePost = (content, ticketId = null) => request('/api/community/posts', json('POST', { content, ticketId }))
+export const fetchMyWins = () => request('/api/my/wins')
 export const deletePost = (id) => request(`/api/community/posts/${id}`, { method: 'DELETE' })
 export const fetchCommunityStats = () => request('/api/admin/community')
 export const clearPosts = () => request('/api/admin/community/posts', { method: 'DELETE' })

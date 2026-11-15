@@ -10,7 +10,7 @@ export default function CommunityAdmin() {
   const [q, setQ] = useState('')
 
   const onDelete = async (p) => {
-    if (!window.confirm(`${p.author}님의 글을 지울까요?\n\n${p.content.slice(0, 80)}`)) return
+    if (!window.confirm(`${p.author}님의 글을 지울까요?\n\n${p.win ? `[당첨 인증 ${p.win.round}회 ${p.win.rank}] ` : ''}${p.content.slice(0, 80)}`)) return
     try { await deletePost(p.id); removeLocal(p.id); setMsg('글을 지웠습니다.') } catch (e) { setMsg(e.message) }
   }
   const onClear = async () => {
@@ -52,7 +52,10 @@ export default function CommunityAdmin() {
                     <tr key={p.id}>
                       <td className="num muted">{formatTime(p.createdAt)}</td>
                       <td className="title-md" style={{ fontSize: 15 }}>{p.author}{p.admin && <span className="caption"> · 관리자</span>}</td>
-                      <td className="post-cell">{p.content}</td>
+                      <td className="post-cell">
+                        {p.win && <span className="role-badge win" style={{ marginRight: 6 }}>당첨 인증 · {p.win.round}회 {p.win.rank}</span>}
+                        {p.content}
+                      </td>
                       <td><div className="row-actions"><button className="btn btn-danger btn-sm" type="button" onClick={() => onDelete(p)}>삭제</button></div></td>
                     </tr>
                   ))}

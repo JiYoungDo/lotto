@@ -111,12 +111,19 @@ public class WinnerService {
         for (Ticket t : tickets.findByMemberIdOrderByRoundDescIdAsc(memberId)) {
             List<Integer> win = drawn.get(t.getRound());
             if (win == null) continue;
-            int n = matched(t, win).size();
-            if (n >= WIN_MATCH) {
-                out.add(Map.of("round", t.getRound(), "rank", TicketService.rank(n), "matchCount", n, "numbers", t.numbers()));
+            List<Integer> hit = matched(t, win);
+            if (hit.size() >= WIN_MATCH) {
+                out.add(Map.of("ticketId", t.getId(), "round", t.getRound(), "rank", TicketService.rank(hit.size()),
+                        "matchCount", hit.size(), "numbers", t.numbers(), "matched", hit, "winning", win));
             }
         }
         return out;
+    }
+
+    /** 이 회원의 당첨 번호 한 줄 (커뮤니티 당첨 인증용). 본인 번호가 아니거나 당첨이 아니면 거절 */
+    public Map<String, Object> winOf(Long memberId, Long ticketId) {
+        return winsOf(memberId).stream().filter(w -> ticketId.equals(w.get("ticketId"))).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("인증할 수 있는 당첨 번호가 아닙니다."));
     }
 
     public boolean isWinner(Long memberId) {

@@ -256,6 +256,31 @@ input[type=file].input { padding: 10px 16px; height: auto; }
 .chat-compose-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .chat-compose .caption.warn { color: var(--down); }
 .chat-compose.guest { justify-content: space-between; align-items: center; flex-wrap: wrap; font-size: 14px; color: var(--ink); }
+.chat-compose-actions { display: flex; gap: 8px; align-items: center; }
+.win-toggle.on { background: #e6f7ef; color: var(--up); box-shadow: inset 0 0 0 1px var(--up); }
+
+/* 커뮤니티 당첨 인증 */
+.role-badge.win { background: var(--up); color: #fff; }
+.balls { display: inline-flex; flex-wrap: wrap; align-items: center; }
+.balls.sm .ball { width: 28px; height: 28px; font-size: 12px; margin: 1px; }
+.balls.xs .ball { width: 22px; height: 22px; font-size: 11px; margin: 1px; }
+.win-card {
+  display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; padding: 12px 14px; border-radius: 16px;
+  background: #f1fbf6; border: 1px solid #a8e2c6; color: var(--ink);
+}
+.win-card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+.win-card-head .role-badge { padding: 1px 8px; font-size: 11px; }
+.win-card-drawn { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.win-picker { padding: 14px 20px; border-top: 1px solid var(--hairline); background: var(--canvas); display: flex; flex-direction: column; gap: 10px; max-height: 240px; overflow-y: auto; }
+.win-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.win-option {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px 12px; border-radius: 14px;
+  border: 1px solid var(--hairline); background: var(--canvas); font: 500 13px var(--font); color: var(--ink); cursor: pointer; text-align: left;
+}
+.win-option:hover { border-color: var(--up); }
+.win-option.on { border-color: var(--up); background: #f1fbf6; box-shadow: inset 0 0 0 1px var(--up); }
+.win-option-head b { margin-right: 4px; }
+.win-attached { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 20px; border-top: 1px solid var(--hairline); background: #f1fbf6; font-size: 14px; color: var(--ink); }
 @media (max-width: 639px) {
   .chat-msg { max-width: 92%; }
   .chat-list { padding: 14px; }

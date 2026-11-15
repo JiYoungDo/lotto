@@ -20,7 +20,7 @@ public class CommunityController {
         this.hub = hub;
     }
 
-    public record PostRequest(String content) {}
+    public record PostRequest(String content, Long ticketId) {}
 
     @GetMapping("/api/community/posts")
     public Map<String, Object> posts() {
@@ -36,7 +36,7 @@ public class CommunityController {
 
     @PostMapping("/api/community/posts")
     public ResponseEntity<Map<String, Object>> write(@RequestBody PostRequest req, Authentication auth) {
-        return ResponseEntity.status(201).body(community.write(auth.getName(), AuthController.isAdmin(auth), req.content()));
+        return ResponseEntity.status(201).body(community.write(auth.getName(), AuthController.isAdmin(auth), req.content(), req.ticketId()));
     }
 
     @DeleteMapping("/api/community/posts/{id}")

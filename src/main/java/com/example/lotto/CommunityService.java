@@ -18,11 +18,15 @@ public class CommunityService {
 
     private final PostRepository repo;
     private final CommunityHub hub;
+    private final MemberRepository members;
+    private final WinnerService winners;
     private final Map<String, Long> lastPostAt = new ConcurrentHashMap<>();
 
-    public CommunityService(PostRepository repo, CommunityHub hub) {
+    public CommunityService(PostRepository repo, CommunityHub hub, MemberRepository members, WinnerService winners) {
         this.repo = repo;
         this.hub = hub;
+        this.members = members;
+        this.winners = winners;
     }
 
     /** 최신 100개를 오래된 글 → 최신 글 순서로 */
@@ -34,9 +38,21 @@ public class CommunityService {
 
     @Transactional
     public synchronized Map<String, Object> write(String author, boolean admin, String content) {
+        return write(author, admin, content, null);
+    }
+
+    /** ticketId가 있으면 그 번호가 글쓴이 본인의 당첨 번호인지 서버에서 확인하고 당첨 인증을 붙인다 */
+    @Transactional
+    public synchronized Map<String, Object> write(String author, boolean admin, String content, Long ticketId) {
         String text = content == null ? "" : content.strip();
-        if (text.isEmpty()) throw new IllegalArgumentException("내용을 입력하세요.");
+        if (text.isEmpty() && ticketId == null) throw new IllegalArgumentException("내용을 입력하세요.");
         if (text.length() > MAX_LENGTH) throw new IllegalArgumentException("글은 " + MAX_LENGTH + "자까지 쓸 수 있습니다.");
+
+        Map<String, Object> win = null;
+        if (ticketId != null) {
+            Member m = members.findByUsername(author).orElseThrow(() -> new SecurityException("회원 정보를 찾을 수 없습니다."));
+            win = winners.winOf(m.getId(), ticketId);
+        }
 
         long now = System.currentTimeMillis();
         Long last = lastPostAt.get(author);
@@ -45,7 +61,13 @@ public class CommunityService {
         }
         lastPostAt.put(author, now);
 
-        Post saved = repo.save(new Post(author, admin, text));
+        Post post = new Post(author, admin, text);
+        if (win != null) {
+            @SuppressWarnings("unchecked") List<Integer> numbers = (List<Integer>) win.get("numbers");
+            @SuppressWarnings("unchecked") List<Integer> drawn = (List<Integer>) win.get("winning");
+            post.attachWin((int) win.get("round"), (int) win.get("matchCount"), numbers, drawn);
+        }
+        Post saved = repo.save(post);
         prune();
         Map<String, Object> dto = dto(saved);
         hub.broadcast("post", dto);
@@ -82,7 +104,18 @@ public class CommunityService {
     public long count() { return repo.count(); }
 
     private static Map<String, Object> dto(Post p) {
-        return Map.of("id", p.getId(), "author", p.getAuthor(), "admin", p.isAuthorAdmin(),
-                "content", p.getContent(), "createdAt", p.getCreatedAt().format(DT));
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", p.getId());
+        m.put("author", p.getAuthor());
+        m.put("admin", p.isAuthorAdmin());
+        m.put("content", p.getContent());
+        m.put("createdAt", p.getCreatedAt().format(DT));
+        if (p.hasWin()) {
+            List<Integer> drawn = p.getWinDrawn();
+            m.put("win", Map.of("round", p.getWinRound(), "rank", TicketService.rank(p.getWinMatchCount()),
+                    "matchCount", p.getWinMatchCount(), "numbers", p.getWinNumbers(), "winning", drawn,
+                    "matched", p.getWinNumbers().stream().filter(drawn::contains).toList()));
+        }
+        return m;
     }
 }
