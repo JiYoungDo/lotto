@@ -33,7 +33,7 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
     private static final Pattern USERNAME = Pattern.compile("^[a-zA-Z0-9_]{4,20}$");
     private static final Pattern NICKNAME = Pattern.compile("^[가-힣a-zA-Z0-9_]{2,12}$");
     /** 일반 회원이 닉네임에 쓸 수 없는 말 (관리자 사칭 방지) */
-    private static final List<String> RESERVED = List.of("관리자", "운영자", "admin", "운영진", "lottolab");
+    private static final List<String> RESERVED = List.of("관리자", "운영자", "admin", "운영진", "로또연구소");
     private static final DateTimeFormatter DT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final SecureRandom RANDOM = new SecureRandom();
 

@@ -65,6 +65,8 @@ class NicknameTest {
         signUp("nick_rule4", "진짜관리자").andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("관리자로 오해할 수 있는 닉네임은 쓸 수 없습니다."));
         signUp("nick_rule5", "Admin_kim").andExpect(status().isBadRequest());
+        signUp("nick_rule7", "로또연구소장").andExpect(status().isBadRequest())    // 서비스 이름 사칭
+                .andExpect(jsonPath("$.message").value("관리자로 오해할 수 있는 닉네임은 쓸 수 없습니다."));
         // 기존 회원의 아이디(=기존 닉네임)도 닉네임으로 쓸 수 없음
         if (!members.existsByUsername("old_member")) members.save(new Member("old_member", encoder.encode("password123"), Member.Role.USER));
         signUp("nick_rule6", "old_member").andExpect(status().isBadRequest());
