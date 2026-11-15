@@ -5,6 +5,9 @@ import { useAuth } from '../auth.js'
 import Balls from '../components/Balls.jsx'
 import { CASE_GUIDE, sourceLabel, summaryLabel } from '../hypotheses.js'
 import { useDrawEvents } from '../drawEvents.js'
+import { useChatEvents } from '../chat.js'
+import { fetchMyChat, sendMyChat, readMyChat } from '../api.js'
+import ChatThread from '../components/ChatThread.jsx'
 
 // 가설 선택 카드: 0 = 무작위, 1~5 = 가설
 const PICKS = [
@@ -116,6 +119,8 @@ export default function MyPage() {
           )}
         </div>
       </section>
+
+      <MemberChat />
 
       <section className="section" id="results">
         <div className="container">
@@ -427,5 +432,51 @@ function RoundFolds({ rounds, rows, opened, onToggle, onSetAll, onMemo, onDelete
         )
       })}
     </div>
+  )
+}
+
+// ---------- 당첨 회원 ↔ 관리자 채팅 ----------
+
+function MemberChat() {
+  const [chat, setChat] = useState(null)
+
+  const load = () => fetchMyChat().then((c) => {
+    setChat(c)
+    if (c.eligible && c.unread > 0) readMyChat().catch(() => {}) // 화면에 보였으니 읽음 처리
+  }).catch(() => {})
+  useEffect(() => { load() }, [])
+
+  // 당첨 번호가 등록되면 채팅 자격이 새로 생길 수 있음
+  useDrawEvents(() => load())
+
+  // 관리자 메시지 실시간 수신
+  useChatEvents(!!chat?.eligible, (m) => {
+    if (!m) { load(); return }
+    setChat((c) => (c && !c.messages.some((x) => x.id === m.id) ? { ...c, messages: [...c.messages, m] } : c))
+    if (m.fromAdmin) readMyChat().catch(() => {})
+  })
+
+  if (!chat?.eligible) return null
+
+  const send = async (content) => {
+    const m = await sendMyChat(content)
+    setChat((c) => (c && !c.messages.some((x) => x.id === m.id) ? { ...c, messages: [...c.messages, m] } : c))
+  }
+
+  return (
+    <section className="section" id="chat">
+      <div className="container" style={{ maxWidth: 860 }}>
+        <div className="win-banner">
+          <strong>당첨을 축하드려요!</strong>
+          <span>{chat.wins.map((w) => `${w.round}회 ${w.rank}`).join(' · ')}</span>
+        </div>
+        <div className="section-head" style={{ marginBottom: 20 }}>
+          <h2 className="display-sm">관리자와 채팅</h2>
+          <p>당첨 기록이 있는 회원만 관리자와 1:1로 대화할 수 있습니다. 메시지는 실시간으로 주고받으며, 다른 회원에게는 보이지 않습니다. 비밀번호나 계좌번호 같은 민감한 정보는 보내지 마세요.</p>
+        </div>
+        <ChatThread messages={chat.messages} viewerIsAdmin={false} onSend={send} maxLength={chat.maxLength}
+                    emptyText="아직 대화가 없습니다. 궁금한 점을 관리자에게 남겨 보세요." />
+      </div>
+    </section>
   )
 }

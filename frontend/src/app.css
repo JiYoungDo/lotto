@@ -280,6 +280,30 @@ input[type=file].input { padding: 10px 16px; height: auto; }
 .pool-meta b { color: var(--ink); font-size: 12px; }
 @media (max-width: 639px) { .pool-big { font-size: 40px; } .pool-hero { padding: 24px; } }
 
+/* 당첨자·채팅 */
+.winner-layout { display: grid; grid-template-columns: 240px 1fr; gap: 16px; align-items: start; }
+.round-list { display: flex; flex-direction: column; gap: 8px; max-height: 640px; overflow-y: auto; }
+.round-item, .conv-item {
+  display: flex; flex-direction: column; gap: 4px; text-align: left; cursor: pointer; width: 100%;
+  padding: 12px 14px; border-radius: 14px; border: 1px solid var(--hairline); background: var(--canvas); font: inherit; color: var(--ink);
+}
+.round-item:hover, .conv-item:hover { border-color: var(--muted-soft); }
+.round-item.on, .conv-item.on { border: 2px solid var(--primary); padding: 11px 13px; }
+.round-item-top, .conv-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.rank-chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 12px; }
+.dm-layout { display: grid; grid-template-columns: 260px 1fr; gap: 16px; align-items: start; }
+.conv-list { display: flex; flex-direction: column; gap: 8px; max-height: 560px; overflow-y: auto; }
+.conv-last { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.unread-dot { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--down); color: #fff; font: 600 11px/20px var(--mono); text-align: center; }
+.dm-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; color: var(--ink); }
+.dm-list { height: min(50vh, 440px); }
+.win-banner {
+  display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 24px; padding: 14px 18px; border-radius: 16px;
+  background: rgba(5, 177, 105, .1); border: 1px solid rgba(5, 177, 105, .35); color: var(--ink); font-size: 14px;
+}
+.win-banner strong { color: var(--up); font-size: 15px; }
+@media (max-width: 860px) { .winner-layout, .dm-layout { grid-template-columns: 1fr; } .round-list, .conv-list { max-height: 260px; } }
+
 /* 마이페이지 */
 .result-chip { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 100px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .result-chip.pending { background: var(--surface-strong); color: var(--muted); }
@@ -384,6 +408,7 @@ input[type=file].input { padding: 10px 16px; height: auto; }
 .down { color: var(--down); }
 .hit { color: var(--up); font-weight: 600; }
 .miss { color: var(--muted-soft); }
+.more-bar { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--hairline); }
 .case-cell span { display: block; }
 .case-cell .case-count { margin-top: 2px; font: 400 11px var(--mono); color: var(--muted); }
 .note { margin-top: 24px; font-size: 14px; color: var(--muted); max-width: 720px; }
@@ -393,4 +418,3 @@ input[type=file].input { padding: 10px 16px; height: auto; }
 .footer-light .wordmark { display: inline-block; margin-bottom: 12px; }
 .footer-light p { font-size: 14px; max-width: 640px; }
 .legal-band { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--hairline); font-size: 13px; color: var(--muted); }
-.more-bar { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--hairline); }

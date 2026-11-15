@@ -19,6 +19,7 @@ import java.io.IOException;
  * - 회원가입(POST /api/auth/signup)은 누구나 할 수 있다. 회원 정보는 DB(member 테이블)에 저장된다.
  * - 커뮤니티 글 읽기·실시간 스트림은 누구나, 글쓰기·삭제는 로그인한 회원만 할 수 있다.
  * - 마이페이지(/api/my/**: 번호 생성, 구매 번호 관리)는 로그인한 회원 본인만 쓸 수 있다.
+ * - 관리자 채팅(/api/chat/**)은 로그인한 회원 중 당첨 기록이 있는 회원만 (ChatService에서 확인).
  * - 회차 추가·엑셀 업로드 등 나머지 /api 요청은 관리자(ROLE_ADMIN)만 할 수 있다.
  * - 로그인은 세션 쿠키 방식이고, 변경 요청에는 CSRF 토큰(XSRF-TOKEN 쿠키 → X-XSRF-TOKEN 헤더)이 필요하다.
  */
@@ -33,7 +34,7 @@ public class SecurityConfig {
                 .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()   // 실시간 스트림(SSE)·오류 응답
                 .requestMatchers(HttpMethod.GET, "/api/draws", "/api/draws/pool", "/api/draws/stream", "/api/analysis", "/api/auth/me", "/api/community/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/signup").permitAll()
-                .requestMatchers("/api/auth/password", "/api/community/**", "/api/my/**").authenticated()   // 로그인한 회원
+                .requestMatchers("/api/auth/password", "/api/community/**", "/api/my/**", "/api/chat/**").authenticated()   // 로그인한 회원
                 .requestMatchers("/api/**").hasRole("ADMIN")
                 .requestMatchers(h2Console).hasRole("ADMIN")                                 // DB 웹 화면은 관리자만
                 .anyRequest().permitAll())

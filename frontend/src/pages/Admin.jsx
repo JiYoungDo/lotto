@@ -3,9 +3,11 @@ import { useAuth } from '../auth.js'
 import DrawAdmin from './admin/DrawAdmin.jsx'
 import MemberAdmin from './admin/MemberAdmin.jsx'
 import CommunityAdmin from './admin/CommunityAdmin.jsx'
+import WinnerAdmin from './admin/WinnerAdmin.jsx'
 
 const TABS = [
   ['draws', '회차 관리'],
+  ['winners', '당첨자·채팅'],
   ['members', '회원 관리'],
   ['community', '커뮤니티 관리'],
 ]
@@ -36,6 +38,7 @@ export default function Admin() {
         </div>
       </div>
       {tab === 'draws' && <DrawAdmin username={me.username} />}
+      {tab === 'winners' && <WinnerAdmin />}
       {tab === 'members' && <MemberAdmin me={me} />}
       {tab === 'community' && <CommunityAdmin />}
     </>
