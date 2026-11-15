@@ -94,3 +94,8 @@ export const fetchThread = (memberId) => request(`/api/admin/chats/${memberId}`)
 export const sendAdminChat = (memberId, content) => request(`/api/admin/chats/${memberId}`, json('POST', { content }))
 export const readAdminChat = (memberId) => request(`/api/admin/chats/${memberId}/read`, { method: 'POST' })
 
+
+export const fetchGameRanking = () => request('/api/game/ranking')
+export const fetchMyGame = () => request('/api/game/me')
+export const startGameRun = () => request('/api/game/runs', { method: 'POST' })
+export const submitGameScore = (runId, score) => request('/api/game/scores', json('POST', { runId, score }))

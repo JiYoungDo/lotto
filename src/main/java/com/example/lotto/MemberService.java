@@ -37,16 +37,18 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
     private final MemberRepository repo;
     private final TicketRepository tickets;
     private final ChatMessageRepository chats;
+    private final GameScoreRepository gameScores;
     private final PasswordEncoder encoder;
     private final String adminUsername;
     private final String adminPassword;
 
-    public MemberService(MemberRepository repo, TicketRepository tickets, ChatMessageRepository chats, PasswordEncoder encoder,
+    public MemberService(MemberRepository repo, TicketRepository tickets, ChatMessageRepository chats, GameScoreRepository gameScores, PasswordEncoder encoder,
                          @Value("${lotto.admin.username:admin}") String adminUsername,
                          @Value("${lotto.admin.password:}") String adminPassword) {
         this.repo = repo;
         this.tickets = tickets;
         this.chats = chats;
+        this.gameScores = gameScores;
         this.encoder = encoder;
         this.adminUsername = adminUsername;
         this.adminPassword = adminPassword;
@@ -197,6 +199,7 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
         Member m = target(id, actor);
         tickets.deleteByMemberId(m.getId());   // 그 회원의 구매 번호도 함께 삭제
         chats.deleteByMemberId(m.getId());     // 관리자와의 대화도 삭제
+        gameScores.deleteByMemberId(m.getId()); // 게임 점수도 삭제
         repo.delete(m);
         return m.getUsername();
     }

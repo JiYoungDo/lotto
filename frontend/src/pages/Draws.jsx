@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchDraws } from '../api.js'
 import PoolStatus from '../components/PoolStatus.jsx'
+import BallRunner from '../components/BallRunner.jsx'
 import Balls from '../components/Balls.jsx'
 import { useDrawEvents } from '../drawEvents.js'
 
@@ -52,6 +53,7 @@ export default function Draws() {
       </section>
 
       <PoolStatus />
+      <BallRunner />
     </>
   )
 }
