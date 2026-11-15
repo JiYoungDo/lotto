@@ -483,6 +483,12 @@ input[type=file].input { padding: 10px 16px; height: auto; }
 .rank-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .rank-score { font-weight: 600; }
 .runner-rank-me { margin-top: 12px; }
+.catch-stage { touch-action: none; }
+.band-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.band-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--body); }
+.band-chip b { color: var(--ink); font-weight: 600; }
+.band-chip .ball { width: 24px; height: 24px; margin: 0; font-size: 11px; }   /* 손가락으로 바구니를 끄는 동안 화면이 스크롤되지 않게 */
+.catch-center { display: flex; flex-direction: column; gap: 8px; margin: -24px 0 20px; padding: 12px 16px; border: 1px solid var(--hairline); border-radius: 16px; background: var(--canvas); }
 @media (max-width: 899px) {
   .runner-layout { grid-template-columns: minmax(0, 1fr); }
 }

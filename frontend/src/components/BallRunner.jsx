@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { fetchGameRanking, fetchMyGame, startGameRun, submitGameScore } from '../api.js'
-import { useAuth } from '../auth.js'
-import { ballRange } from '../ball.js'
-import { subscribeStream } from '../stream.js'
+import { drawBall, fitCanvas, fitText, pick, useGameScores } from '../gameScores.js'
+import GameRanking, { GameFoot } from './GameRanking.jsx'
 
 // 공 점프 러너: 로또 공이 굴러가며 '꽝' 쪽지를 뛰어넘는 미니 게임.
-// 점수 규칙(초당 최대 점수)은 서버 GameService.MAX_POINTS_PER_SEC 와 맞춰야 합니다.
+// 10초마다 레벨이 올라 속도가 빨라지고 장애물 간격이 좁아집니다.
+// 점수 규칙(초당 최대 점수)은 서버 GameService.GAMES 의 runner 와 맞춰야 합니다.
 
 const H = 210
 const GROUND = H - 34
@@ -14,11 +12,13 @@ const R = 17                 // 공 반지름
 const BALL_X = 72
 const GRAVITY = 2300
 const JUMP_V = -780
-const SPEED_START = 300      // px/s
-const SPEED_MAX = 840
-const SPEED_UP = 9           // 초당 가속
-const PX_PER_POINT = 40      // 최고 속도에서 초당 21점
-const BALL_COLORS = { 1: '#fbc400', 2: '#69c8f2', 3: '#ff7272', 4: '#aaaaaa', 5: '#b0d840' }
+const AIR_TIME = (2 * -JUMP_V) / GRAVITY   // 한 번 점프해서 떠 있는 시간 (약 0.68초)
+const SPEED_START = 320      // px/s
+const SPEED_MAX = 1000
+const SPEED_UP = 12          // 초당 가속 → 약 57초에 최고 속도
+const LEVEL_SEC = 10
+const MAX_LEVEL = 10
+const PX_PER_POINT = 40      // 최고 속도에서 초당 25점
 
 const QUIPS = [
   '번호는 안 맞아도 점프 타이밍은 맞췄잖아요',
@@ -30,74 +30,34 @@ const QUIPS = [
 ]
 
 const newBallNo = () => 1 + Math.floor(Math.random() * 45)
-const pick = (list) => list[Math.floor(Math.random() * list.length)]
 
 function freshGame(ballNo) {
-  return { state: 'ready', y: GROUND - R, vy: 0, t: 0, dist: 0, score: 0, speed: SPEED_START,
-    obstacles: [], nextIn: 520, ballNo, buffer: 0, quip: '' }
+  return { state: 'ready', y: GROUND - R, vy: 0, t: 0, dist: 0, score: 0, speed: SPEED_START, level: 1,
+    levelAt: -10, obstacles: [], nextIn: 520, ballNo, buffer: 0, quip: '' }
 }
 
 export default function BallRunner() {
-  const { me } = useAuth()
-  const loggedIn = !!me?.loggedIn
+  const scores = useGameScores('runner')
+  const { begin, end } = scores
   const wrapRef = useRef(null)
   const canvasRef = useRef(null)
   const game = useRef(freshGame(newBallNo()))
-  const run = useRef(null)          // 서버 판 번호 Promise (로그인했을 때만)
   const [phase, setPhase] = useState('ready')
-  const [lastScore, setLastScore] = useState(null)
-  const [ranking, setRanking] = useState(null)
-  const [mine, setMine] = useState(null)
-  const [msg, setMsg] = useState(null)
+  const [result, setResult] = useState(null)   // { score, level }
 
-  // ----- 순위 (실시간) -----
-  useEffect(() => {
-    let alive = true
-    const load = () => fetchGameRanking().then((d) => alive && setRanking(d.ranking)).catch(() => {})
-    load()
-    const off = subscribeStream('/api/game/stream', ['ranking'], (name, data) => {
-      if (name === 'reconnect') load()
-      else setRanking(data.ranking)
-    })
-    return () => { alive = false; off() }
-  }, [])
-
-  useEffect(() => {
-    if (!loggedIn) return
-    let alive = true
-    fetchMyGame().then((d) => alive && setMine(d)).catch(() => {})
-    return () => { alive = false }
-  }, [loggedIn, me?.username])
-
-  // ----- 게임 진행 -----
-  const finish = useCallback(async (score) => {
-    setLastScore(score)
+  const finish = useCallback((g) => {
+    setResult({ score: g.score, level: g.level })
     setPhase('over')
-    if (!run.current) return
-    const pending = run.current
-    run.current = null
-    try {
-      const { runId } = await pending
-      const r = await submitGameScore(runId, score)
-      setMine({ best: r.best, plays: r.plays, rank: r.rank, newBest: r.newBest })
-      setRanking(r.ranking)
-    } catch (e) {
-      setMsg(e.message)
-    }
-  }, [])
+    end(g.score)
+  }, [end])
 
   const start = useCallback(() => {
     const g = freshGame(newBallNo())
     g.state = 'running'
     game.current = g
     setPhase('running')
-    setMsg(null)
-    setMine((m) => m && { ...m, newBest: false })
-    if (loggedIn) {
-      run.current = startGameRun()
-      run.current.catch(() => {})   // 실패는 끝날 때 처리
-    }
-  }, [loggedIn])
+    begin()
+  }, [begin])
 
   const jump = useCallback(() => {
     const g = game.current
@@ -119,21 +79,7 @@ export default function BallRunner() {
   }
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d')
-    let width = 600
-    const resize = () => {
-      const dpr = window.devicePixelRatio || 1
-      width = Math.max(280, wrapRef.current.clientWidth)
-      canvas.width = Math.round(width * dpr)
-      canvas.height = Math.round(H * dpr)
-      canvas.style.height = H + 'px'
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    }
-    resize()
-    const ro = new ResizeObserver(resize)
-    ro.observe(wrapRef.current)
-
+    const { ctx, size, stop } = fitCanvas(canvasRef.current, wrapRef.current, H)
     let raf
     let prev = performance.now()
     const frame = (now) => {
@@ -141,22 +87,19 @@ export default function BallRunner() {
       const dt = Math.min(0.05, (now - prev) / 1000)
       prev = now
       const g = game.current
-      if (g.state === 'running') step(g, dt, width)
+      if (g.state === 'running') step(g, dt, size.width)
       if (g.state === 'crashed') {
         g.state = 'over'
         g.overAt = now
         g.quip = pick(QUIPS)
-        finish(g.score)
+        finish(g)
       }
-      draw(ctx, g, width, now / 1000)
+      draw(ctx, g, size.width, now / 1000)
       raf = requestAnimationFrame(frame)
     }
     raf = requestAnimationFrame(frame)
-    return () => { cancelAnimationFrame(raf); ro.disconnect() }
+    return () => { cancelAnimationFrame(raf); stop() }
   }, [finish])
-
-  const myRankText = mine?.rank ? `내 순위 ${mine.rank}위 · 최고 ${mine.best.toLocaleString()}점` : '아직 기록이 없어요'
-  const amFirst = loggedIn && ranking?.[0]?.username === me.username
 
   return (
     <section className="section band-soft" id="runner">
@@ -166,6 +109,7 @@ export default function BallRunner() {
           <p>
             로또 1등은 못 했지만, 여기서는 내가 1등이지. 굴러가는 로또 공으로 <b>꽝</b> 쪽지를 뛰어넘으세요.
             <span className="kbd">Space</span> <span className="kbd">Tab</span> <span className="kbd">↑</span> 또는 화면을 눌러 점프합니다.
+            {' '}{LEVEL_SEC}초마다 레벨이 올라 점점 빨라지고, 쪽지 간격도 좁아집니다.
           </p>
         </div>
 
@@ -176,44 +120,10 @@ export default function BallRunner() {
                  role="application" aria-label="공 점프 러너 게임. 스페이스나 탭으로 점프">
               <canvas ref={canvasRef} />
             </div>
-            <div className="runner-foot">
-              {phase === 'over' && lastScore != null ? (
-                <span>
-                  <b className="num">{lastScore.toLocaleString()}점</b>
-                  {mine?.newBest && <span className="role-badge win" style={{ marginLeft: 8 }}>최고 기록!</span>}
-                </span>
-              ) : <span className="caption">{phase === 'running' ? '달리는 중…' : '준비되면 시작하세요'}</span>}
-              <button className="btn btn-primary btn-sm" type="button"
-                      onClick={() => { wrapRef.current.focus(); start() }} disabled={phase === 'running'}>
-                {phase === 'over' ? '다시 하기' : '시작'}
-              </button>
-            </div>
-            {msg && <p className="notice" style={{ margin: '0 20px 16px' }}>{msg}</p>}
+            <GameFoot phase={phase} result={result} scores={scores} runningText="달리는 중…"
+                      onStart={() => { wrapRef.current.focus(); start() }} />
           </div>
-
-          <aside className="runner-rank">
-            <div className="runner-rank-head">
-              <h3>오늘의 진짜 1등</h3>
-              <span className="caption"><span className="live-dot on" />실시간 TOP 5</span>
-            </div>
-            {amFirst && <p className="runner-crown">👑 로또 1등은 아니지만, 이건 당신이 1등이에요!</p>}
-            <ol className="rank-list">
-              {!ranking && <li className="caption">불러오는 중…</li>}
-              {ranking && ranking.length === 0 && <li className="caption">아직 기록이 없어요. 첫 1등의 자리가 비어 있습니다.</li>}
-              {ranking && ranking.map((r) => (
-                <li key={r.username} className={(loggedIn && r.username === me.username ? 'me ' : '') + 'rank-' + r.rank}>
-                  <span className="rank-no">{r.rank === 1 ? '👑' : r.rank}</span>
-                  <span className="rank-name">{r.username}</span>
-                  <span className="rank-score num">{r.best.toLocaleString()}</span>
-                </li>
-              ))}
-            </ol>
-            <div className="runner-rank-me caption">
-              {loggedIn
-                ? myRankText
-                : <>점수를 순위에 올리려면 <Link to="/login">로그인</Link>하세요. 게임은 누구나 할 수 있어요.</>}
-            </div>
-          </aside>
+          <GameRanking title="오늘의 진짜 1등" scores={scores} />
         </div>
       </div>
     </section>
@@ -224,6 +134,8 @@ export default function BallRunner() {
 function step(g, dt, width) {
   g.t += dt
   g.speed = Math.min(SPEED_MAX, SPEED_START + g.t * SPEED_UP)
+  const level = Math.min(MAX_LEVEL, 1 + Math.floor(g.t / LEVEL_SEC))
+  if (level !== g.level) { g.level = level; g.levelAt = g.t }
   const dx = g.speed * dt
   g.dist += dx
   g.score = Math.floor(g.dist / PX_PER_POINT)
@@ -238,21 +150,25 @@ function step(g, dt, width) {
   }
   if (g.buffer > 0) g.buffer = Math.max(0, g.buffer - dt)
 
-  // 장애물: 꽝 쪽지 (가끔 두 장 붙어 있음)
+  // 장애물: 꽝 쪽지. 레벨이 오를수록 여러 장 붙어 나오고 키가 커짐
   for (const o of g.obstacles) o.x -= dx
   g.obstacles = g.obstacles.filter((o) => o.x + o.w > -10)
   g.nextIn -= dx
   if (g.nextIn <= 0) {
-    const count = g.t > 12 && Math.random() < 0.3 ? 2 : 1
+    const L = g.level
+    const roll = Math.random()
+    const count = L >= 5 && roll < 0.12 ? 3 : L >= 2 && roll < 0.12 + Math.min(0.4, 0.05 * L) ? 2 : 1
     let x = width + 20
     for (let i = 0; i < count; i++) {
       const w = 20 + Math.random() * 14
-      const h = 26 + Math.random() * (g.t > 20 ? 30 : 18)
+      const h = 26 + Math.random() * Math.min(40, 14 + 4 * L)
       g.obstacles.push({ x, w, h, tilt: (Math.random() - 0.5) * 0.12 })
       x += w + 4
     }
-    // 공이 한 번 점프하는 동안 움직이는 거리보다 간격을 넉넉히 둔다
-    g.nextIn = g.speed * (0.85 + Math.random() * 0.9) + 120
+    // 다음 쪽지까지 거리: 레벨이 오를수록 좁고 고르게. 그래도 한 번 점프해서 착지할 거리(AIR_TIME)는 항상 남긴다
+    const lo = Math.max(AIR_TIME + 0.07, 0.95 - 0.025 * (L - 1))
+    const spread = Math.max(0.3, 1.0 - 0.07 * (L - 1))
+    g.nextIn = (x - width - 20) + g.speed * (lo + Math.random() * spread) + 70
   }
 
   // 충돌 (조금 너그럽게)
@@ -276,6 +192,7 @@ function draw(ctx, g, width, time) {
   // 멀리 지나가는 숫자 (배경)
   ctx.font = '600 22px "JetBrains Mono", monospace'
   ctx.fillStyle = 'rgba(0, 82, 255, 0.07)'
+  ctx.textAlign = 'left'
   const off = (g.dist * 0.25) % 160
   for (let x = -off, i = Math.floor(g.dist * 0.25 / 160); x < width + 160; x += 160, i++) {
     ctx.fillText(String(((i * 17) % 45) + 1), x + 40, 52 + ((i * 37) % 3) * 22)
@@ -311,29 +228,30 @@ function draw(ctx, g, width, time) {
   ctx.beginPath(); ctx.ellipse(BALL_X, GROUND + 2, R * Math.max(0.5, 1 - lift / 200), 4, 0, 0, Math.PI * 2); ctx.fill()
 
   const bob = g.state === 'ready' ? Math.abs(Math.sin(time * 3)) * -10 : 0
-  const y = g.y + bob
-  ctx.fillStyle = BALL_COLORS[ballRange(g.ballNo)]
-  ctx.beginPath(); ctx.arc(BALL_X, y, R, 0, Math.PI * 2); ctx.fill()
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.35)'
-  ctx.beginPath(); ctx.arc(BALL_X - 5, y - 6, R * 0.35, 0, Math.PI * 2); ctx.fill()
-  ctx.save()
-  ctx.translate(BALL_X, y)
-  ctx.rotate(g.dist / R)
-  ctx.fillStyle = '#fff'
-  ctx.beginPath(); ctx.arc(0, 0, R * 0.58, 0, Math.PI * 2); ctx.fill()
-  ctx.fillStyle = '#0a0b0d'
-  ctx.font = '700 12px "JetBrains Mono", monospace'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText(String(g.ballNo), 0, 1)
-  ctx.restore()
+  drawBall(ctx, BALL_X, g.y + bob, R, g.ballNo, g.dist / R)
 
-  // 점수
-  ctx.textAlign = 'right'
+  // 점수·레벨
   ctx.textBaseline = 'alphabetic'
+  ctx.textAlign = 'right'
   ctx.fillStyle = '#0a0b0d'
   ctx.font = '600 16px "JetBrains Mono", monospace'
   ctx.fillText(String(g.score).padStart(5, '0'), width - 16, 28)
+  if (g.state !== 'ready') {
+    ctx.textAlign = 'left'
+    ctx.fillStyle = '#0052ff'
+    ctx.font = '700 13px "JetBrains Mono", monospace'
+    ctx.fillText(`LV ${g.level}`, 16, 28)
+  }
+  // 레벨이 오르면 잠깐 알림
+  const since = g.t - g.levelAt
+  if (g.state === 'running' && g.level > 1 && since < 1.3) {
+    ctx.globalAlpha = Math.min(1, (1.3 - since) * 2)
+    ctx.textAlign = 'center'
+    ctx.fillStyle = '#0052ff'
+    ctx.font = '800 20px sans-serif'
+    ctx.fillText(`LEVEL ${g.level} · 속도 UP!`, width / 2, 64)
+    ctx.globalAlpha = 1
+  }
 
   // 안내 문구
   ctx.textAlign = 'center'
@@ -354,15 +272,4 @@ function draw(ctx, g, width, time) {
     fitText(ctx, 'Space · Enter · 화면 터치로 다시 하기', width, 120, 500, 13)
   }
   ctx.textAlign = 'left'
-}
-
-// 가운데 정렬 문구를 화면 폭에 맞게 (좁은 휴대폰에서는 글자를 줄임)
-function fitText(ctx, text, width, y, weight, size) {
-  let px = size
-  ctx.font = `${weight} ${px}px sans-serif`
-  while (px > 10 && ctx.measureText(text).width > width - 32) {
-    px -= 1
-    ctx.font = `${weight} ${px}px sans-serif`
-  }
-  ctx.fillText(text, width / 2, y)
 }

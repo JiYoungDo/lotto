@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { fetchDraws } from '../api.js'
 import PoolStatus from '../components/PoolStatus.jsx'
 import BallRunner from '../components/BallRunner.jsx'
+import CatchGame from '../components/CatchGame.jsx'
 import Balls from '../components/Balls.jsx'
 import { useDrawEvents } from '../drawEvents.js'
 
@@ -54,6 +55,7 @@ export default function Draws() {
 
       <PoolStatus />
       <BallRunner />
+      <CatchGame />
     </>
   )
 }

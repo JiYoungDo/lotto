@@ -3,16 +3,20 @@ package com.example.lotto;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-/** 공 점프 러너 게임: 회원별 최고 점수 한 줄 */
+/** 미니 게임 회원별 최고 점수 한 줄 (게임마다 따로) */
 @Entity
-@Table(name = "game_score")
+@Table(name = "game_record",
+        uniqueConstraints = @UniqueConstraint(name = "uk_game_record_member", columnNames = {"game", "memberId"}))
 public class GameScore {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, length = 20)
+    private String game;            // runner: 공 점프 러너, catch: 번호 캐치
+
+    @Column(nullable = false)
     private Long memberId;
 
     @Column(nullable = false, length = 20)
@@ -27,12 +31,14 @@ public class GameScore {
 
     protected GameScore() {}
 
-    public GameScore(Long memberId, String username) {
+    public GameScore(String game, Long memberId, String username) {
+        this.game = game;
         this.memberId = memberId;
         this.username = username;
         this.bestAt = LocalDateTime.now(Member.ZONE);
     }
 
+    public String getGame() { return game; }
     public Long getMemberId() { return memberId; }
     public String getUsername() { return username; }
     public int getBest() { return best; }

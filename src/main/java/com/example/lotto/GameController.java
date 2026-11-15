@@ -7,7 +7,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.Map;
 
-/** 공 점프 러너: 순위·실시간 스트림은 누구나, 점수 기록은 로그인한 회원 */
+/** 미니 게임 (game: runner, catch): 순위·실시간 스트림은 누구나, 점수 기록은 로그인한 회원 */
 @RestController
 @RequestMapping("/api/game")
 public class GameController {
@@ -22,29 +22,29 @@ public class GameController {
 
     public record ScoreRequest(String runId, Integer score) {}
 
-    @GetMapping("/ranking")
-    public Map<String, Object> ranking() {
-        return Map.of("ranking", game.ranking(), "top", GameService.TOP);
-    }
-
-    /** 실시간 스트림 (이벤트: ranking) */
+    /** 실시간 스트림 (이벤트: ranking { game, ranking }) */
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream() {
         return hub.subscribe();
     }
 
-    @GetMapping("/me")
-    public Map<String, Object> me(Authentication auth) {
-        return game.mine(auth.getName());
+    @GetMapping("/{name}/ranking")
+    public Map<String, Object> ranking(@PathVariable String name) {
+        return Map.of("game", name, "ranking", game.ranking(name), "top", GameService.TOP);
     }
 
-    @PostMapping("/runs")
-    public Map<String, Object> start(Authentication auth) {
-        return game.start(auth.getName());
+    @GetMapping("/{name}/me")
+    public Map<String, Object> me(@PathVariable String name, Authentication auth) {
+        return game.mine(name, auth.getName());
     }
 
-    @PostMapping("/scores")
-    public Map<String, Object> submit(@RequestBody ScoreRequest req, Authentication auth) {
-        return game.submit(auth.getName(), req.runId(), req.score());
+    @PostMapping("/{name}/runs")
+    public Map<String, Object> start(@PathVariable String name, Authentication auth) {
+        return game.start(name, auth.getName());
+    }
+
+    @PostMapping("/{name}/scores")
+    public Map<String, Object> submit(@PathVariable String name, @RequestBody ScoreRequest req, Authentication auth) {
+        return game.submit(name, auth.getName(), req.runId(), req.score());
     }
 }
