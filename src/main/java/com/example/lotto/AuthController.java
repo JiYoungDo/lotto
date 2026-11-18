@@ -2,7 +2,10 @@ package com.example.lotto;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,12 +19,17 @@ import java.util.Map;
 public class AuthController {
 
     private final MemberService members;
+    private final CommunityService community;
 
-    public AuthController(MemberService members) { this.members = members; }
+    public AuthController(MemberService members, CommunityService community) {
+        this.members = members;
+        this.community = community;
+    }
 
     public record SignUpRequest(String username, String nickname, String password, Boolean adult) {}   // adult: 만 19세 이상 확인 (필수)
     public record PasswordRequest(String currentPassword, String newPassword) {}
     public record NicknameRequest(String nickname) {}
+    public record WithdrawRequest(String password, Boolean deletePosts) {}   // deletePosts: 내 커뮤니티 글도 지울지
 
     /** 내 닉네임 변경 (로그인한 회원) */
     @PatchMapping("/nickname")
@@ -42,6 +50,18 @@ public class AuthController {
     public Map<String, Object> changePassword(Authentication auth, @RequestBody PasswordRequest req) {
         members.changeOwnPassword(auth.getName(), req.currentPassword(), req.newPassword());
         return Map.of("message", "비밀번호를 바꿨습니다.");
+    }
+
+    /** 회원 탈퇴 (로그인한 본인). 비밀번호를 다시 확인하고, 끝나면 세션을 끊는다. */
+    @PostMapping("/withdraw")
+    public Map<String, Object> withdraw(Authentication auth, @RequestBody WithdrawRequest req, HttpServletRequest request) {
+        String name = auth.getName();
+        members.withdraw(name, req.password());
+        if (Boolean.TRUE.equals(req.deletePosts())) community.deleteAllBy(name);
+        HttpSession session = request.getSession(false);
+        if (session != null) session.invalidate();
+        SecurityContextHolder.clearContext();
+        return Map.of("message", "탈퇴했습니다. 그동안 이용해 주셔서 고맙습니다.");
     }
 
     /** 현재 로그인 상태. 화면이 처음 열릴 때 호출하며, 이때 CSRF 토큰 쿠키도 함께 발급된다. */

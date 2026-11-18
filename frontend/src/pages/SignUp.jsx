@@ -17,6 +17,8 @@ export default function SignUp() {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [adult, setAdult] = useState(false)   // 만 19세 이상 확인 (필수)
+  const [agreeTerms, setAgreeTerms] = useState(false)     // 이용약관 동의 (필수)
+  const [agreePrivacy, setAgreePrivacy] = useState(false) // 개인정보 수집·이용 동의 (필수)
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
 
@@ -30,7 +32,7 @@ export default function SignUp() {
   const pwOk = password.length >= 8 && password.length <= 64
   const sameOk = confirm === password
   // 중복 확인 결과가 '사용 중'이면 막음 (확인 전이면 서버가 가입할 때 한 번 더 확인)
-  const valid = nameOk && nickOk && nameFree?.ok !== false && nickFree?.ok !== false && pwOk && sameOk && adult
+  const valid = nameOk && nickOk && nameFree?.ok !== false && nickFree?.ok !== false && pwOk && sameOk && adult && agreeTerms && agreePrivacy
 
   const onSubmit = async (e) => {
     e.preventDefault()
@@ -84,6 +86,14 @@ export default function SignUp() {
             <label className="check adult-check">
               <input type="checkbox" required checked={adult} onChange={(e) => setAdult(e.target.checked)} />
               <span><b>만 19세 이상입니다.</b> <span className="req">(필수)</span></span>
+            </label>
+            <label className="check adult-check">
+              <input type="checkbox" required checked={agreeTerms} onChange={(e) => setAgreeTerms(e.target.checked)} />
+              <span><Link to="/terms" target="_blank">이용약관</Link>에 동의합니다. <span className="req">(필수)</span></span>
+            </label>
+            <label className="check adult-check">
+              <input type="checkbox" required checked={agreePrivacy} onChange={(e) => setAgreePrivacy(e.target.checked)} />
+              <span>아이디·닉네임·비밀번호 수집·이용에 동의합니다. <Link to="/privacy" target="_blank">자세히</Link> <span className="req">(필수)</span></span>
             </label>
             <button className="btn btn-primary" type="submit" disabled={busy || !valid}>{busy ? '가입 중…' : '가입하기'}</button>
           </form>

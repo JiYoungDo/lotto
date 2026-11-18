@@ -59,6 +59,10 @@ export default function Layout() {
             <span className="footer-tag">번호 기록·분석 도구</span>
           </Link>
           <p>회차별 번호 출현 횟수를 분석해서 내 가설이 맞았는지 기록하는 개인 분석 도구입니다.</p>
+          <nav className="footer-links" aria-label="약관">
+            <Link to="/terms">이용약관</Link>
+            <Link to="/privacy"><b>개인정보 처리방침</b></Link>
+          </nav>
           <div className="legal-band">
             <Disclaimer compact />
           </div>

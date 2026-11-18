@@ -10,6 +10,8 @@ import java.util.List;
 public interface PostRepository extends JpaRepository<Post, Long> {
     List<Post> findTop100ByOrderByIdDesc();
 
+    List<Post> findByAuthor(String author);
+
     /** id가 minId보다 작은(더 오래된) 글을 모두 지운다 */
     @Modifying
     @Query("delete from Post p where p.id < :minId")

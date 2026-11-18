@@ -97,6 +97,14 @@ public class CommunityService {
         hub.broadcast("delete", Map.of("id", id));
     }
 
+    /** 탈퇴하는 회원의 글을 모두 삭제 */
+    @Transactional
+    public void deleteAllBy(String author) {
+        List<Post> mine = repo.findByAuthor(author);
+        repo.deleteAll(mine);
+        mine.forEach(p -> hub.broadcast("delete", Map.of("id", p.getId())));
+    }
+
     /** 관리자: 전체 삭제 */
     @Transactional
     public long clear() {

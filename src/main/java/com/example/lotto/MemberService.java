@@ -248,11 +248,29 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
     @Transactional
     public String delete(Long id, String actor) {
         Member m = target(id, actor);
-        tickets.deleteByMemberId(m.getId());   // 그 회원의 구매 번호도 함께 삭제
-        chats.deleteByMemberId(m.getId());     // 관리자와의 대화도 삭제
-        gameScores.deleteByMemberId(m.getId()); // 게임 점수도 삭제
-        repo.delete(m);
+        remove(m);
         return m.getUsername();
+    }
+
+    /** 본인 탈퇴: 비밀번호를 다시 확인한다. 관리자 계정은 탈퇴할 수 없다. */
+    @Transactional
+    public void withdraw(String username, String password) {
+        Member m = repo.findByUsername(username).orElseThrow(() -> new NoSuchElementException("회원을 찾을 수 없습니다."));
+        if (password == null || !encoder.matches(password, m.getPassword())) {
+            throw new IllegalArgumentException("비밀번호가 맞지 않습니다.");
+        }
+        if (m.getRole() == Member.Role.ADMIN) {
+            throw new IllegalArgumentException("관리자 계정은 탈퇴할 수 없습니다. 다른 관리자에게 일반 회원으로 바꿔 달라고 하세요.");
+        }
+        remove(m);
+    }
+
+    /** 회원과 그 회원의 저장 번호·1:1 채팅·게임 점수를 함께 삭제 (커뮤니티 글은 따로) */
+    private void remove(Member m) {
+        tickets.deleteByMemberId(m.getId());
+        chats.deleteByMemberId(m.getId());
+        gameScores.deleteByMemberId(m.getId());
+        repo.delete(m);
     }
 
     /** 로그인 세션이 아직 유효한지: 회원이 있고, 정지되지 않았고, 권한이 그대로인지 */
