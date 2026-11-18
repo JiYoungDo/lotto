@@ -53,6 +53,8 @@ export const signUp = (username, nickname, password, adult, agreeTerms, agreePri
   })
 // 가입 전에 아이디·닉네임을 쓸 수 있는지 확인: { username?: { ok, message }, nickname?: { ok, message } }
 export const checkAvailable = (field, value) => request(`/api/auth/available?${field}=${encodeURIComponent(value)}`)
+// 기존 회원이 지금 약관에 다시 동의
+export const agreeTerms = () => request('/api/auth/agree', json('POST', { agreeTerms: true, agreePrivacy: true }))
 // 회원 탈퇴: 비밀번호 확인, deletePosts면 내 커뮤니티 글도 삭제
 export const withdraw = (password, deletePosts) => request('/api/auth/withdraw', json('POST', { password, deletePosts }))
 export const changeNickname = (nickname) => request('/api/auth/nickname', json('PATCH', { nickname }))

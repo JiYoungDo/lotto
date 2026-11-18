@@ -285,9 +285,34 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
 
     /** 로그인 세션이 아직 유효한지: 회원이 있고, 정지되지 않았고, 권한이 그대로인지 */
     public boolean sessionValid(String username, boolean sessionIsAdmin) {
-        return repo.findByUsername(username)
-                .map(m -> !m.isSuspended() && (m.getRole() == Member.Role.ADMIN) == sessionIsAdmin)
-                .orElse(false);
+        return sessionState(username, sessionIsAdmin) != SessionState.INVALID;
+    }
+
+    public enum SessionState { OK, INVALID, TERMS_REQUIRED }
+
+    /** 세션 상태: 끊어야 하는지(INVALID), 새 약관 동의가 필요한지(TERMS_REQUIRED) */
+    public SessionState sessionState(String username, boolean sessionIsAdmin) {
+        return repo.findByUsername(username).map(m -> {
+            if (m.isSuspended() || (m.getRole() == Member.Role.ADMIN) != sessionIsAdmin) return SessionState.INVALID;
+            return needsTerms(m) ? SessionState.TERMS_REQUIRED : SessionState.OK;
+        }).orElse(SessionState.INVALID);
+    }
+
+    /** 지금 약관에 아직 동의하지 않은 일반 회원인지 (관리자는 운영자 쪽이라 제외) */
+    static boolean needsTerms(Member m) {
+        return m.getRole() == Member.Role.USER && !TERMS_VERSION.equals(m.getTermsVersion());
+    }
+
+    public boolean termsRequired(String username) {
+        return repo.findByUsername(username).map(MemberService::needsTerms).orElse(false);
+    }
+
+    /** 기존 회원이 로그인 후 지금 약관에 다시 동의 */
+    @Transactional
+    public void agreeTerms(String username, boolean termsAgreed, boolean privacyAgreed) {
+        if (!termsAgreed || !privacyAgreed) throw new IllegalArgumentException("이용약관과 개인정보 수집·이용에 모두 동의해 주세요.");
+        Member m = repo.findByUsername(username).orElseThrow(() -> new NoSuchElementException("회원을 찾을 수 없습니다."));
+        m.agreeTerms(TERMS_VERSION);
     }
 
     // ---------- 서버 시작 시 관리자 계정 맞추기 ----------

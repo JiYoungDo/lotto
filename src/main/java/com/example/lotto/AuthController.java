@@ -31,6 +31,7 @@ public class AuthController {
                                 Boolean agreeTerms, Boolean agreePrivacy) {}
     public record PasswordRequest(String currentPassword, String newPassword) {}
     public record NicknameRequest(String nickname) {}
+    public record AgreeRequest(Boolean agreeTerms, Boolean agreePrivacy) {}
     public record WithdrawRequest(String password, Boolean deletePosts) {}   // deletePosts: 내 커뮤니티 글도 지울지
 
     /** 내 닉네임 변경 (로그인한 회원) */
@@ -55,6 +56,13 @@ public class AuthController {
         return Map.of("message", "비밀번호를 바꿨습니다.");
     }
 
+    /** 기존 회원이 지금 약관에 다시 동의 (로그인한 본인) */
+    @PostMapping("/agree")
+    public Map<String, Object> agree(Authentication auth, @RequestBody AgreeRequest req) {
+        members.agreeTerms(auth.getName(), Boolean.TRUE.equals(req.agreeTerms()), Boolean.TRUE.equals(req.agreePrivacy()));
+        return Map.of("message", "동의했습니다. 계속 이용해 주세요.");
+    }
+
     /** 회원 탈퇴 (로그인한 본인). 비밀번호를 다시 확인하고, 끝나면 세션을 끊는다. */
     @PostMapping("/withdraw")
     public Map<String, Object> withdraw(Authentication auth, @RequestBody WithdrawRequest req, HttpServletRequest request) {
@@ -74,7 +82,9 @@ public class AuthController {
         boolean loggedIn = isLoggedIn(auth);
         boolean admin = loggedIn && isAdmin(auth);
         String nickname = loggedIn ? members.nicknames(List.of(auth.getName())).getOrDefault(auth.getName(), auth.getName()) : "";
-        return Map.of("loggedIn", loggedIn, "admin", admin, "username", loggedIn ? auth.getName() : "", "nickname", nickname);
+        boolean termsRequired = loggedIn && !admin && members.termsRequired(auth.getName());   // 새 약관 동의가 필요한지
+        return Map.of("loggedIn", loggedIn, "admin", admin, "username", loggedIn ? auth.getName() : "", "nickname", nickname,
+                "termsRequired", termsRequired);
     }
 
     /** 가입 화면에서 아이디·닉네임을 쓸 수 있는지 미리 확인 (둘 중 보낸 것만 확인) */

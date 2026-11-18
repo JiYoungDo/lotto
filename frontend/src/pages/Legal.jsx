@@ -1,12 +1,11 @@
 import { Link } from 'react-router-dom'
 import { ADS_ENABLED } from '../ads.js'
+import { EFFECTIVE } from '../legal.js'
 
-// 이용약관·개인정보 처리방침. 운영자 정보와 시행일은 여기 한 곳에서 바꿉니다.
-// 시행일을 바꾸면 서버의 MemberService.TERMS_VERSION 도 같이 바꿔 주세요 (가입 시 동의한 버전으로 저장됨).
+// 이용약관·개인정보 처리방침. 운영자 정보는 여기서, 시행일은 legal.js 에서 바꿉니다.
 const SERVICE = '로또 연구소'
 const OPERATOR = '로또 연구소 운영자'
 const CONTACT = <>마이페이지의 <Link to="/mypage#chat">관리자 1:1 채팅</Link></>
-const EFFECTIVE = '2026년 11월 18일'
 
 function Doc({ title, lead, children }) {
   return (

@@ -45,7 +45,7 @@ class WinnerChatTest {
         tickets.deleteAllInBatch();
         draws.deleteAllInBatch();
         for (String n : new String[]{"winner1", "loser1"}) {
-            if (!members.existsByUsername(n)) members.save(new Member(n, encoder.encode("password123"), Member.Role.USER));
+            if (!members.existsByUsername(n)) members.save(TestMembers.user(n, encoder));
         }
         winner = members.findByUsername("winner1").orElseThrow().getId();
         loser = members.findByUsername("loser1").orElseThrow().getId();
@@ -129,7 +129,7 @@ class WinnerChatTest {
     @Test
     void 빈_메시지는_거부하고_회원_삭제시_대화도_지운다() throws Exception {
         memberSend("winner1", "   ").andExpect(status().isBadRequest());
-        if (!members.existsByUsername("gone_win")) members.save(new Member("gone_win", encoder.encode("password123"), Member.Role.USER));
+        if (!members.existsByUsername("gone_win")) members.save(TestMembers.user("gone_win", encoder));
         Long gone = members.findByUsername("gone_win").orElseThrow().getId();
         tickets.save(new Ticket(gone, 10, List.of(1, 2, 3, 4, 5, 7), null, null, null));
         memberSend("gone_win", "hi").andExpect(status().isCreated());

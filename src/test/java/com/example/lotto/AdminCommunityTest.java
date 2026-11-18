@@ -35,7 +35,7 @@ class AdminCommunityTest {
     @BeforeEach
     void setUp() {
         for (String name : new String[]{"alice", "bob_1"}) {
-            if (!members.existsByUsername(name)) members.save(new Member(name, encoder.encode("password123"), Member.Role.USER));
+            if (!members.existsByUsername(name)) members.save(TestMembers.user(name, encoder));
         }
         posts.deleteAllInBatch();
     }
@@ -66,7 +66,7 @@ class AdminCommunityTest {
 
     @Test
     void 정지된_회원은_로그인할_수_없고_기존_세션도_끊긴다() throws Exception {
-        if (!members.existsByUsername("carol")) members.save(new Member("carol", encoder.encode("password123"), Member.Role.USER));
+        if (!members.existsByUsername("carol")) members.save(TestMembers.user("carol", encoder));
         MockHttpSession s = login("carol", "password123");
 
         mvc.perform(patch("/api/admin/members/" + id("carol") + "/suspend").with(csrf()).with(user("admin").roles("ADMIN"))
@@ -80,7 +80,7 @@ class AdminCommunityTest {
 
     @Test
     void 권한_변경_비밀번호_초기화_삭제() throws Exception {
-        if (!members.existsByUsername("dave")) members.save(new Member("dave", encoder.encode("password123"), Member.Role.USER));
+        if (!members.existsByUsername("dave")) members.save(TestMembers.user("dave", encoder));
         Long dave = id("dave");
 
         mvc.perform(patch("/api/admin/members/" + dave + "/role").with(csrf()).with(user("admin").roles("ADMIN"))
@@ -108,7 +108,7 @@ class AdminCommunityTest {
 
     @Test
     void 본인_비밀번호_변경() throws Exception {
-        if (!members.existsByUsername("erin")) members.save(new Member("erin", encoder.encode("password123"), Member.Role.USER));
+        if (!members.existsByUsername("erin")) members.save(TestMembers.user("erin", encoder));
         mvc.perform(post("/api/auth/password").with(csrf()).with(user("erin").roles("USER")).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"currentPassword\":\"wrong\",\"newPassword\":\"newpass1234\"}")).andExpect(status().isBadRequest());
         mvc.perform(post("/api/auth/password").with(csrf()).with(user("erin").roles("USER")).contentType(MediaType.APPLICATION_JSON)

@@ -34,7 +34,7 @@ class GameTest {
         scores.deleteAllInBatch();
         for (int i = 1; i <= 6; i++) {
             String n = "runner" + i;
-            if (!members.existsByUsername(n)) members.save(new Member(n, encoder.encode("password123"), Member.Role.USER));
+            if (!members.existsByUsername(n)) members.save(TestMembers.user(n, encoder));
         }
     }
 

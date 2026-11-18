@@ -35,7 +35,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/draws", "/api/draws/pool", "/api/draws/stream", "/api/analysis", "/api/auth/me", "/api/auth/available", "/api/community/**",
                         "/api/game/*/ranking", "/api/game/stream").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/signup").permitAll()
-                .requestMatchers("/api/auth/password", "/api/auth/nickname", "/api/auth/withdraw", "/api/community/**", "/api/my/**", "/api/chat/**", "/api/game/**").authenticated()   // 로그인한 회원
+                .requestMatchers("/api/auth/password", "/api/auth/nickname", "/api/auth/withdraw", "/api/auth/agree", "/api/community/**", "/api/my/**", "/api/chat/**", "/api/game/**").authenticated()   // 로그인한 회원
                 .requestMatchers("/api/**").hasRole("ADMIN")
                 .requestMatchers(h2Console).hasRole("ADMIN")                                 // DB 웹 화면은 관리자만
                 .anyRequest().permitAll())

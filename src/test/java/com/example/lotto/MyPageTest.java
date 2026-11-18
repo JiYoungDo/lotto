@@ -48,7 +48,7 @@ class MyPageTest {
             draws.save(new Draw(r, s.get(0), s.get(1), s.get(2), s.get(3), s.get(4), s.get(5)));
         }
         for (String n : new String[]{"buyer", "other"}) {
-            if (!members.existsByUsername(n)) members.save(new Member(n, encoder.encode("password123"), Member.Role.USER));
+            if (!members.existsByUsername(n)) members.save(TestMembers.user(n, encoder));
         }
     }
 
@@ -120,7 +120,7 @@ class MyPageTest {
 
     @Test
     void 회원을_삭제하면_구매_번호도_지워진다() throws Exception {
-        if (!members.existsByUsername("leaver")) members.save(new Member("leaver", encoder.encode("password123"), Member.Role.USER));
+        if (!members.existsByUsername("leaver")) members.save(TestMembers.user("leaver", encoder));
         save("leaver", "{\"sets\":[[1,2,3,4,5,6]]}").andExpect(status().isCreated());
         memberService.delete(members.findByUsername("leaver").orElseThrow().getId(), "admin");
         assertEquals(0, tickets.count());

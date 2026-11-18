@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
 
-// 로그인 상태 공유: { me: { loggedIn, admin, username, nickname } | null(확인 중), refresh, signIn, signOut }
+// 로그인 상태 공유: { me: { loggedIn, admin, username, nickname, termsRequired } | null(확인 중), refresh, signIn, signOut }
 export const AuthContext = createContext(null)
 export const useAuth = () => useContext(AuthContext)

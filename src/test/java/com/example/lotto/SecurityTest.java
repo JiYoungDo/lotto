@@ -31,7 +31,7 @@ class SecurityTest {
     /** with(user("u")) 로 쓰는 일반 회원도 DB에 있어야 세션 확인 필터를 통과한다 */
     @org.junit.jupiter.api.BeforeEach
     void ensureUser() {
-        if (!members.existsByUsername("u")) members.save(new Member("u", encoder.encode("password123"), Member.Role.USER));
+        if (!members.existsByUsername("u")) members.save(TestMembers.user("u", encoder));
     }
 
     private static final String BODY = "{\"round\":1,\"numbers\":[1,2,3,4,5,6]}";
@@ -181,6 +181,35 @@ class SecurityTest {
         signUp("ab", "password123").andExpect(status().isBadRequest());         // 너무 짧은 아이디
         signUp("한글아이디", "password123").andExpect(status().isBadRequest());   // 허용 안 되는 문자
         signUp("shortpw", "1234").andExpect(status().isBadRequest());           // 짧은 비밀번호
+    }
+
+    @Test
+    void 이전_약관에_동의한_회원은_다시_동의하기_전까지_쓰기가_막힌다() throws Exception {
+        signUp("old_terms", "password123").andExpect(status().isCreated());
+        Member m = members.findByUsername("old_terms").orElseThrow();
+        m.agreeTerms("2000-01-01");   // 예전 약관에 동의한 상태로 만듦
+        members.save(m);
+
+        mvc.perform(get("/api/auth/me").with(user("old_terms").roles("USER")))
+                .andExpect(jsonPath("$.termsRequired").value(true));
+        mvc.perform(post("/api/my/tickets").with(csrf()).with(user("old_terms").roles("USER"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.termsRequired").value(true));
+
+        mvc.perform(post("/api/auth/agree").with(csrf()).with(user("old_terms").roles("USER"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"agreeTerms\":true}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/auth/agree").with(csrf()).with(user("old_terms").roles("USER"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"agreeTerms\":true,\"agreePrivacy\":true}"))
+                .andExpect(status().isOk());
+
+        assertEquals(MemberService.TERMS_VERSION, members.findByUsername("old_terms").orElseThrow().getTermsVersion());
+        mvc.perform(get("/api/auth/me").with(user("old_terms").roles("USER")))
+                .andExpect(jsonPath("$.termsRequired").value(false));
+        mvc.perform(post("/api/my/tickets").with(csrf()).with(user("old_terms").roles("USER"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(jsonPath("$.termsRequired").doesNotExist());
     }
 
     @Test

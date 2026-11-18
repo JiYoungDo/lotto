@@ -553,3 +553,4 @@ input[type=file].input { padding: 10px 16px; height: auto; }
 /* 관리자 회원 목록: 약관 동의 버전 */
 .terms-ver { display: block; font-size: 11px; }
 .terms-ver.old { color: var(--down); }
+.link-btn { padding: 0; border: 0; background: none; font: inherit; color: var(--primary); cursor: pointer; }
