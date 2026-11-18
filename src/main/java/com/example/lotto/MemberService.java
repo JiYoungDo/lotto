@@ -36,6 +36,8 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
     private static final List<String> RESERVED = List.of("관리자", "운영자", "admin", "운영진", "로또연구소");
     private static final DateTimeFormatter DT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final SecureRandom RANDOM = new SecureRandom();
+    /** 지금 적용 중인 이용약관·개인정보 처리방침의 시행일 (frontend/src/pages/Legal.jsx 의 EFFECTIVE 와 같이 바꿈) */
+    public static final String TERMS_VERSION = "2026-11-18";
 
     private final MemberRepository repo;
     private final TicketRepository tickets;
@@ -61,8 +63,10 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
 
     /** 가입 규칙을 어기면 IllegalArgumentException (메시지는 화면에 그대로 보여줌) */
     @Transactional
-    public Member signUp(String username, String nickname, String password, boolean adultConfirmed) {
+    public Member signUp(String username, String nickname, String password, boolean adultConfirmed,
+                         boolean termsAgreed, boolean privacyAgreed) {
         if (!adultConfirmed) throw new IllegalArgumentException("만 19세 이상만 가입할 수 있습니다. 나이 확인에 체크해 주세요.");
+        if (!termsAgreed || !privacyAgreed) throw new IllegalArgumentException("이용약관과 개인정보 수집·이용에 동의해야 가입할 수 있습니다.");
         String name = username == null ? "" : username.trim();
         String nick = nickname == null ? "" : nickname.trim();
         String problem = usernameProblem(name);
@@ -72,6 +76,7 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
         Member m = new Member(name, encoder.encode(password), Member.Role.USER);
         m.changeNickname(nick);
         m.confirmAdult();
+        m.agreeTerms(TERMS_VERSION);
         try {
             return repo.saveAndFlush(m);
         } catch (org.springframework.dao.DataIntegrityViolationException e) {

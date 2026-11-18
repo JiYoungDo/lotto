@@ -26,7 +26,9 @@ public class AuthController {
         this.community = community;
     }
 
-    public record SignUpRequest(String username, String nickname, String password, Boolean adult) {}   // adult: 만 19세 이상 확인 (필수)
+    // adult: 만 19세 이상 확인, agreeTerms: 이용약관 동의, agreePrivacy: 개인정보 수집·이용 동의 (모두 필수)
+    public record SignUpRequest(String username, String nickname, String password, Boolean adult,
+                                Boolean agreeTerms, Boolean agreePrivacy) {}
     public record PasswordRequest(String currentPassword, String newPassword) {}
     public record NicknameRequest(String nickname) {}
     public record WithdrawRequest(String password, Boolean deletePosts) {}   // deletePosts: 내 커뮤니티 글도 지울지
@@ -41,7 +43,8 @@ public class AuthController {
     /** 회원가입: 일반 회원(USER)으로 DB에 저장 */
     @PostMapping("/signup")
     public ResponseEntity<Map<String, Object>> signUp(@RequestBody SignUpRequest req) {
-        Member m = members.signUp(req.username(), req.nickname(), req.password(), Boolean.TRUE.equals(req.adult()));
+        Member m = members.signUp(req.username(), req.nickname(), req.password(), Boolean.TRUE.equals(req.adult()),
+                Boolean.TRUE.equals(req.agreeTerms()), Boolean.TRUE.equals(req.agreePrivacy()));
         return ResponseEntity.status(201).body(Map.of("message", m.getUsername() + "님, 가입되었습니다."));
     }
 

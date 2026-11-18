@@ -41,7 +41,7 @@ class WithdrawTest {
 
     private Long signUp(String username) throws Exception {
         mvc.perform(post("/api/auth/signup").with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"" + username + "\",\"nickname\":\"" + username + "\",\"password\":\"password123\",\"adult\":true}"))
+                .content("{\"username\":\"" + username + "\",\"nickname\":\"" + username + "\",\"password\":\"password123\",\"adult\":true,\"agreeTerms\":true,\"agreePrivacy\":true}"))
                 .andExpect(status().isCreated());
         Long id = members.findByUsername(username).orElseThrow().getId();
         tickets.save(new Ticket(id, id.intValue(), List.of(1, 2, 3, 4, 5, 6), 0, 60.0, "메모"));   // 회차를 회원마다 달리해 조합 중복을 피함

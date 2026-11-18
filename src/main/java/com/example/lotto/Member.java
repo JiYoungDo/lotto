@@ -37,6 +37,12 @@ public class Member {
 
     private LocalDateTime adultConfirmedAt;   // 가입할 때 "만 19세 이상" 확인한 시각 (이 기능 전에 가입한 회원은 null)
 
+    // 가입할 때 동의한 시각과 그때의 약관 버전(시행일). 이 기능 전에 가입한 회원은 null
+    private LocalDateTime termsAgreedAt;      // 이용약관 동의
+    private LocalDateTime privacyAgreedAt;    // 개인정보 수집·이용 동의
+    @Column(length = 20)
+    private String termsVersion;
+
     @Column(unique = true, length = 20)
     private String nickname;              // 커뮤니티·게임 순위에 보이는 이름 (다른 회원과 겹치지 않음)
 
@@ -60,11 +66,21 @@ public class Member {
     public boolean isSuspended() { return Boolean.TRUE.equals(suspended); }
     public LocalDateTime getLastLoginAt() { return lastLoginAt; }
     public LocalDateTime getAdultConfirmedAt() { return adultConfirmedAt; }
+    public LocalDateTime getTermsAgreedAt() { return termsAgreedAt; }
+    public LocalDateTime getPrivacyAgreedAt() { return privacyAgreedAt; }
+    public String getTermsVersion() { return termsVersion; }
     /** 화면에 보일 이름. 닉네임 기능 전에 가입해 아직 닉네임이 없으면 아이디 */
     public String getNickname() { return nickname != null ? nickname : username; }
     public boolean hasNickname() { return nickname != null; }
     public void changeNickname(String nickname) { this.nickname = nickname; }
     public void confirmAdult() { this.adultConfirmedAt = LocalDateTime.now(ZONE); }
+    /** 이용약관·개인정보 수집·이용 동의를 기록 */
+    public void agreeTerms(String version) {
+        LocalDateTime now = LocalDateTime.now(ZONE);
+        this.termsAgreedAt = now;
+        this.privacyAgreedAt = now;
+        this.termsVersion = version;
+    }
 
     public void setSuspended(boolean suspended) { this.suspended = suspended; }
     public void touchLogin() { this.lastLoginAt = LocalDateTime.now(ZONE); }

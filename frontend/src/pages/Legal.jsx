@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 
 // 이용약관·개인정보 처리방침. 운영자 정보와 시행일은 여기 한 곳에서 바꿉니다.
+// 시행일을 바꾸면 서버의 MemberService.TERMS_VERSION 도 같이 바꿔 주세요 (가입 시 동의한 버전으로 저장됨).
 const SERVICE = '로또 연구소'
 const OPERATOR = '로또 연구소 운영자'
 const CONTACT = <>마이페이지의 <Link to="/mypage#chat">관리자 1:1 채팅</Link></>
@@ -30,7 +31,7 @@ export function Privacy() {
         <table className="legal-table">
           <thead><tr><th>구분</th><th>항목</th></tr></thead>
           <tbody>
-            <tr><td>회원가입 (필수)</td><td>아이디, 닉네임, 비밀번호(암호화하여 저장), 만 19세 이상 확인 여부와 확인 시각</td></tr>
+            <tr><td>회원가입 (필수)</td><td>아이디, 닉네임, 비밀번호(암호화하여 저장), 만 19세 이상 확인 여부와 확인 시각, 이용약관·개인정보 수집·이용 동의 시각과 동의한 약관 버전</td></tr>
             <tr><td>서비스 이용 중 생성</td><td>가입일, 마지막 로그인 시각, 이용 정지 여부, 저장한 번호(회차·번호·사용한 가설·메모), 커뮤니티 글, 관리자와의 1:1 채팅 내용, 미니게임 최고 점수와 플레이 횟수</td></tr>
             <tr><td>자동 생성</td><td>로그인 상태를 유지하기 위한 세션 쿠키</td></tr>
           </tbody>

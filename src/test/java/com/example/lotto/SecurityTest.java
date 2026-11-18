@@ -102,7 +102,7 @@ class SecurityTest {
 
     private org.springframework.test.web.servlet.ResultActions signUp(String username, String password) throws Exception {
         return mvc.perform(post("/api/auth/signup").with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"" + username + "\",\"nickname\":\"" + nick(username) + "\",\"password\":\"" + password + "\",\"adult\":true}"));
+                .content("{\"username\":\"" + username + "\",\"nickname\":\"" + nick(username) + "\",\"password\":\"" + password + "\",\"adult\":true,\"agreeTerms\":true,\"agreePrivacy\":true}"));
     }
 
     /** 테스트용 닉네임: 아이디 앞부분 + "닉" (2~12자) */
@@ -114,7 +114,7 @@ class SecurityTest {
     void 만_19세_이상_확인_없이는_가입할_수_없다() throws Exception {
         for (String extra : new String[]{"", ",\"adult\":false"}) {
             mvc.perform(post("/api/auth/signup").with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"username\":\"kid_user\",\"nickname\":\"꼬마\",\"password\":\"password123\"" + extra + "}"))
+                            .content("{\"username\":\"kid_user\",\"nickname\":\"꼬마\",\"password\":\"password123\",\"agreeTerms\":true,\"agreePrivacy\":true" + extra + "}"))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.message").value("만 19세 이상만 가입할 수 있습니다. 나이 확인에 체크해 주세요."));
         }
@@ -122,6 +122,23 @@ class SecurityTest {
 
         signUp("adult_user", "password123").andExpect(status().isCreated());
         assertNotNull(members.findByUsername("adult_user").orElseThrow().getAdultConfirmedAt());
+    }
+
+    @Test
+    void 약관_동의_없이는_가입할_수_없고_동의_시각과_버전을_저장한다() throws Exception {
+        for (String agree : new String[]{"", ",\"agreeTerms\":true", ",\"agreePrivacy\":true", ",\"agreeTerms\":true,\"agreePrivacy\":false"}) {
+            mvc.perform(post("/api/auth/signup").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"username\":\"no_agree\",\"nickname\":\"동의안함\",\"password\":\"password123\",\"adult\":true" + agree + "}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("이용약관과 개인정보 수집·이용에 동의해야 가입할 수 있습니다."));
+        }
+        assertFalse(members.existsByUsername("no_agree"));
+
+        signUp("agree_user", "password123").andExpect(status().isCreated());
+        Member m = members.findByUsername("agree_user").orElseThrow();
+        assertNotNull(m.getTermsAgreedAt());
+        assertNotNull(m.getPrivacyAgreedAt());
+        assertEquals(MemberService.TERMS_VERSION, m.getTermsVersion());
     }
 
     @Test

@@ -40,7 +40,7 @@ export default function SignUp() {
     setBusy(true)
     setError(null)
     try {
-      await signUp(username, nickname, password, adult)
+      await signUp(username, nickname, password, adult, agreeTerms, agreePrivacy)
       await signIn(username, password)
       navigate('/mypage', { replace: true })
     } catch (err) {

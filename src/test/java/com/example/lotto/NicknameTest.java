@@ -40,7 +40,7 @@ class NicknameTest {
 
     private ResultActions signUp(String username, String nickname) throws Exception {
         return mvc.perform(post("/api/auth/signup").with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"" + username + "\",\"nickname\":\"" + nickname + "\",\"password\":\"password123\",\"adult\":true}"));
+                .content("{\"username\":\"" + username + "\",\"nickname\":\"" + nickname + "\",\"password\":\"password123\",\"adult\":true,\"agreeTerms\":true,\"agreePrivacy\":true}"));
     }
 
     @Test

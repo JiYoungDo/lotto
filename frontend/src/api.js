@@ -45,11 +45,11 @@ export const fetchMe = () => request('/api/auth/me')
 export const login = (username, password) =>
   request('/api/auth/login', { method: 'POST', body: new URLSearchParams({ username, password }) })
 export const logout = () => request('/api/auth/logout', { method: 'POST' })
-export const signUp = (username, nickname, password, adult) =>
+export const signUp = (username, nickname, password, adult, agreeTerms, agreePrivacy) =>
   request('/api/auth/signup', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, nickname, password, adult }),
+    body: JSON.stringify({ username, nickname, password, adult, agreeTerms, agreePrivacy }),
   })
 // 가입 전에 아이디·닉네임을 쓸 수 있는지 확인: { username?: { ok, message }, nickname?: { ok, message } }
 export const checkAvailable = (field, value) => request(`/api/auth/available?${field}=${encodeURIComponent(value)}`)
