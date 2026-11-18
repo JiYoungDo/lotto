@@ -549,3 +549,7 @@ input[type=file].input { padding: 10px 16px; height: auto; }
 .ad-placeholder { display: grid; place-items: center; height: 90px; border: 1px dashed var(--hairline); border-radius: 12px; font-size: 12px; color: var(--muted-soft); }
 /* 채울 광고가 없으면 칸을 통째로 숨김 */
 .ad-band:has(ins.adsbygoogle[data-ad-status="unfilled"]) { display: none; }
+
+/* 관리자 회원 목록: 약관 동의 버전 */
+.terms-ver { display: block; font-size: 11px; }
+.terms-ver.old { color: var(--down); }

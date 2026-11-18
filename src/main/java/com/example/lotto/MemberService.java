@@ -208,6 +208,11 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
             row.put("createdAt", m.getCreatedAt().format(DT));
             row.put("createdDate", m.getCreatedAt().toLocalDate().toString());
             row.put("lastLoginAt", m.getLastLoginAt() == null ? null : m.getLastLoginAt().format(DT));
+            // 약관 동의 기록 (동의 기능 전에 가입한 회원은 null)
+            row.put("termsAgreedAt", m.getTermsAgreedAt() == null ? null : m.getTermsAgreedAt().format(DT));
+            row.put("privacyAgreedAt", m.getPrivacyAgreedAt() == null ? null : m.getPrivacyAgreedAt().format(DT));
+            row.put("termsVersion", m.getTermsVersion());
+            row.put("termsCurrent", TERMS_VERSION.equals(m.getTermsVersion()));   // 지금 약관에 동의했는지
             row.put("protected", m.getUsername().equals(adminUsername));   // 기본 관리자 (변경 불가)
             return row;
         }).toList();

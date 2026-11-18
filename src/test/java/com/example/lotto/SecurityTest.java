@@ -139,6 +139,15 @@ class SecurityTest {
         assertNotNull(m.getTermsAgreedAt());
         assertNotNull(m.getPrivacyAgreedAt());
         assertEquals(MemberService.TERMS_VERSION, m.getTermsVersion());
+
+        // 관리자 회원 목록에 동의 기록이 보인다
+        String me = "$[?(@.username == 'agree_user')]";
+        mvc.perform(get("/api/admin/members").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(me + ".termsAgreedAt").isNotEmpty())
+                .andExpect(jsonPath(me + ".privacyAgreedAt").isNotEmpty())
+                .andExpect(jsonPath(me + ".termsVersion").value(MemberService.TERMS_VERSION))
+                .andExpect(jsonPath(me + ".termsCurrent").value(true));
     }
 
     @Test

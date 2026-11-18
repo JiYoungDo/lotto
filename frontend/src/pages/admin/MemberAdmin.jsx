@@ -174,7 +174,7 @@ export default function MemberAdmin({ me }) {
               ) : (
                 <table className="list-table">
                   <thead>
-                    <tr><th>아이디</th><th>닉네임</th><th>권한</th><th>상태</th><th>가입일</th><th>최근 로그인</th><th className="r">관리</th></tr>
+                    <tr><th>아이디</th><th>닉네임</th><th>권한</th><th>상태</th><th>가입일</th><th>약관 동의</th><th>최근 로그인</th><th className="r">관리</th></tr>
                   </thead>
                   <tbody>
                     {shown.map((m) => {
@@ -191,6 +191,7 @@ export default function MemberAdmin({ me }) {
                           <td><span className={'role-badge' + (m.role === 'ADMIN' ? ' admin' : '')}>{m.role === 'ADMIN' ? '관리자' : '일반 회원'}</span></td>
                           <td>{m.suspended ? <span className="role-badge danger">정지</span> : <span className="muted">정상</span>}</td>
                           <td className="num muted">{m.createdAt}</td>
+                          <td><TermsCell m={m} /></td>
                           <td className="num muted">{m.lastLoginAt || '-'}</td>
                           <td>
                             {locked ? (
@@ -230,5 +231,17 @@ function StatTile({ label, value, sub, accent }) {
       <div className="stat-value">{value == null ? '-' : value.toLocaleString()}</div>
       {sub && <div className="caption">{sub}</div>}
     </div>
+  )
+}
+
+// 약관 동의 칸: 동의 시각과 약관 버전. 기록이 없거나 이전 버전이면 따로 표시
+function TermsCell({ m }) {
+  if (!m.termsAgreedAt) return <span className="caption">기록 없음</span>
+  const same = m.termsAgreedAt === m.privacyAgreedAt
+  return (
+    <span title={`이용약관 ${m.termsAgreedAt}\n개인정보 수집·이용 ${m.privacyAgreedAt || '-'}\n약관 버전 ${m.termsVersion}`}>
+      <span className="num muted">{same ? m.termsAgreedAt : `${m.termsAgreedAt} / ${m.privacyAgreedAt || '-'}`}</span>
+      <span className={'caption terms-ver' + (m.termsCurrent ? '' : ' old')}>{m.termsVersion}{m.termsCurrent ? '' : ' (이전 버전)'}</span>
+    </span>
   )
 }
