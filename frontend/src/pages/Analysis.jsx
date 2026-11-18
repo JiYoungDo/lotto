@@ -3,6 +3,7 @@ import { fetchAnalysis } from '../api.js'
 import Balls from '../components/Balls.jsx'
 import NormalChart from '../components/NormalChart.jsx'
 import { CASES, CASE_GUIDE } from '../hypotheses.js'
+import AdSlot from '../components/AdSlot.jsx'
 
 const pct = (v, d = 2) => `${v.toFixed(d)}%`
 const ALL_NUMBERS = Array.from({ length: 45 }, (_, i) => i + 1)
@@ -172,6 +173,8 @@ export default function Analysis() {
           <p className="note">{CASES.map((c, i) => `케이스 ${i + 1}: ${c}`).join(' · ')}</p>
         </div>
       </section>
+
+      <AdSlot type="inline" />
 
       {next && (
         <section className="section">

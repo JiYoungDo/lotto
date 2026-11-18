@@ -1,7 +1,11 @@
-import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth.js'
 import { useNotify } from '../notify.js'
 import Disclaimer from './Disclaimer.jsx'
+import AdSlot from './AdSlot.jsx'
+
+// 푸터 위 광고를 보여 줄 화면 (게임이 있는 회차 번호, 로그인·가입·마이페이지·관리자 같은 입력 화면은 제외)
+const BOTTOM_AD_PATHS = ['/analysis', '/community']
 
 export default function Layout() {
   const cls = ({ isActive }) => (isActive ? 'active' : '')
@@ -9,6 +13,7 @@ export default function Layout() {
   const { unread } = useNotify()
   const admin = me?.admin
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const onSignOut = async () => {
     await signOut()
     navigate('/draws')
@@ -51,6 +56,7 @@ export default function Layout() {
         </div>
       </header>
       <Outlet />
+      {BOTTOM_AD_PATHS.includes(pathname) && <AdSlot key={pathname} type="bottom" />}
       <footer className="footer-dark">
         <div className="container">
           {/* 어두운 푸터에는 글자가 흰색인 로고 */}
