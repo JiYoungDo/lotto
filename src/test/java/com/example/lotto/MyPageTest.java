@@ -149,12 +149,13 @@ class MyPageTest {
         var next = analysis.outlook(draws.findAllByOrderByRoundAsc(), 60);
         // 케이스 1 조건(6개 모두 가운데)을 만족하는 조합 하나
         List<Integer> c1 = NumberGenerator.generate(1, next.center(), next.prevNumbers(), new Random(3));
-        long total1 = NumberGenerator.candidates(1, next.center().size(), next.prevInCenter());
+        long total1 = next.candidates()[0];                   // 제외 조합(과거 당첨·모양 조합)을 뺀 후보 수
+        long random = 8145060L - next.excluded();
 
         mvc.perform(get("/api/draws/pool"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.round").value(61))
-                .andExpect(jsonPath("$.cases[0].remaining").value(8145060))
+                .andExpect(jsonPath("$.cases[0].remaining").value(random))
                 .andExpect(jsonPath("$.cases[1].used").value(0));
 
         save("buyer", "{\"sets\":[" + c1 + "]}").andExpect(status().isCreated());
@@ -162,7 +163,7 @@ class MyPageTest {
         mvc.perform(get("/api/draws/pool"))
                 .andExpect(jsonPath("$.savedTickets").value(1))
                 .andExpect(jsonPath("$.cases[0].used").value(1))
-                .andExpect(jsonPath("$.cases[0].remaining").value(8145059))
+                .andExpect(jsonPath("$.cases[0].remaining").value(random - 1))
                 .andExpect(jsonPath("$.cases[1].used").value(1))
                 .andExpect(jsonPath("$.cases[1].remaining").value(total1 - 1))
                 .andExpect(jsonPath("$.cases[4].used").value(0));   // 케이스 4(가운데 4개)에는 해당 없음

@@ -25,11 +25,11 @@ export const fetchDraws = (limit = 50) => request(`/api/draws?limit=${limit}`)
 export const fetchPool = (conf = 60) => request(`/api/draws/pool?conf=${conf}`)
 export const fetchAnalysis = (conf, min) => request(`/api/analysis?conf=${conf}&min=${min}`)
 
-export const addDraw = (round, numbers) =>
+export const addDraw = (round, numbers, bonus) =>
   request('/api/draws', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ round, numbers }),
+    body: JSON.stringify({ round, numbers, bonus }),
   })
 
 export const uploadExcel = (file) => {

@@ -179,7 +179,10 @@ input[type=file].input { padding: 10px 16px; height: auto; }
   display: inline-block; margin-top: 32px; padding: 12px 20px; border-radius: 100px;
   background: var(--surface-strong); color: var(--ink); font-size: 14px; font-weight: 500;
 }
-@media (max-width: 639px) { .num-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 639px) {
+  .num-grid, .num-grid.with-bonus { grid-template-columns: repeat(3, 1fr); }
+  .num-grid .plus { display: none; }
+}
 
 /* 분석 설정 도움말 (작은 글씨) */
 .setting-help {
@@ -201,6 +204,13 @@ input[type=file].input { padding: 10px 16px; height: auto; }
 .case-desc { font-size: 13px; line-height: 1.6; color: var(--body); flex: 1; }
 .case-formula { margin-top: 12px; font: 500 12px var(--mono); color: var(--ink); }
 .case-now { margin-top: 4px; font: 400 12px var(--mono); color: var(--muted); }
+.exclude-block { margin-top: 64px; }
+.exclude-block .section-head { margin-bottom: 24px; }
+.display-xs { font-size: 24px; line-height: 1.2; letter-spacing: -0.3px; }
+.first-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin-bottom: 16px; }
+.first-card { padding: 20px; }
+.first-stat { font: 500 14px var(--font); color: var(--body); margin: 2px 0 6px; }
+.first-stat b { font: 700 32px var(--mono); color: var(--ink); margin-right: 2px; }
 .pips { display: flex; gap: 6px; margin: 4px 0 14px; }
 .pip { display: inline-block; width: 14px; height: 14px; border-radius: 50%; flex: none; }
 .pip.c { background: var(--primary); }
@@ -418,6 +428,7 @@ input[type=file].input { padding: 10px 16px; height: auto; }
   background: var(--surface-strong); color: var(--ink); font: 500 13px var(--mono);
 }
 .ball.out { opacity: .35; }
+.ball-plus { display: inline-block; margin: 0 4px; font: 600 13px var(--mono); color: var(--muted); vertical-align: middle; }
 /* 번호 구간별 공 색 */
 :root { --ball-1: #fbc400; --ball-2: #69c8f2; --ball-3: #ff7272; --ball-4: #aaaaaa; --ball-5: #b0d840; }
 .ball.r1, .ball.r2, .ball.r3, .ball.r4, .ball.r5 { color: #fff; text-shadow: 0 0 2px rgba(0, 0, 0, .45); font-weight: 600; }
@@ -465,6 +476,18 @@ input[type=file].input { padding: 10px 16px; height: auto; }
 .more-bar { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--hairline); }
 .case-cell span { display: block; }
 .case-cell .case-count { margin-top: 2px; font: 400 11px var(--mono); color: var(--muted); }
+.case-cell .case-win { margin-top: 2px; font: 500 11px var(--mono); color: var(--up); }
+.list-table tr.clickable { cursor: pointer; }
+.list-table tr.clickable:hover td { background: var(--surface-soft); }
+.list-table tr.prize-detail > td { background: var(--surface-soft); padding: 8px 12px 16px; }
+.prize-table { width: 100%; border-collapse: collapse; }
+.prize-table th, .prize-table td { padding: 6px 10px; font-size: 12px; border-bottom: 1px solid var(--hairline); white-space: nowrap; }
+.prize-table th { color: var(--muted); font-weight: 600; text-align: right; }
+.prize-table th:first-child, .prize-table td:first-child { text-align: left; }
+.prize-table td { text-align: right; font-family: var(--mono); }
+.prize-table tr:last-child td { border-bottom: 0; }
+.num-grid.with-bonus { grid-template-columns: repeat(6, 1fr) auto 1fr; align-items: center; }
+.num-grid .plus { font: 600 16px var(--mono); color: var(--muted); padding: 0 4px; }
 .note { margin-top: 24px; font-size: 14px; color: var(--muted); max-width: 720px; }
 
 /* ---------- Footer ---------- */

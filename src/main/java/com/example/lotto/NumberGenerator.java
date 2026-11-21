@@ -40,7 +40,7 @@ public final class NumberGenerator {
         return out.stream().sorted().toList();
     }
 
-    /** 이 조건으로 만들 수 있는 조합 수 (0이면 생성 불가) */
+    /** 조건만으로 센 조합 수 (공식 값, 제외 조합은 빼지 않음 — 실제 후보 수는 NextOutlook.candidates) */
     public static long candidates(int caseNo, int centerSize, int prevInCenter) {
         if (caseNo == 0) return 8_145_060L;
         return AnalysisService.candidateCounts(centerSize, prevInCenter)[caseNo - 1];

@@ -68,7 +68,7 @@ export default function NormalChart({ counts, mean, sd, z: zc, draws }) {
       </div>
 
       <p className="note">
-        {draws.toLocaleString()}개 회차 기준 · 평균 {mean.toFixed(2)}회 · 표준편차 {sd.toFixed(2)}회 ·
+        {draws.toLocaleString()}개 회차 기준 (보너스 포함) · 평균 {mean.toFixed(2)}회 · 표준편차 {sd.toFixed(2)}회 ·
         가운데 구간 |z| ≤ {zc.toFixed(3)} (파란 영역). z는 평균보다 표준편차 몇 배만큼 많이(+) 또는 적게(−) 나왔는지를 뜻합니다.
       </p>
     </div>

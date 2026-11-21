@@ -40,10 +40,19 @@ public class TicketService {
         return out;
     }
 
-    /** 소진된 조합 수: [전체, 케이스1..5] (지금 가운데 번호 기준으로 각 조건을 만족하는 저장 조합 수) */
-    private long[] usedCounts(Collection<List<Integer>> taken, List<Integer> center, List<Integer> prev) {
+    /** 제외 조합(과거 당첨 조합·모양 조합)을 뺀 무작위 후보 수 */
+    private static long randomTotal(AnalysisService.NextOutlook next) {
+        return 8_145_060L - (next == null ? AnalysisService.PATTERN_COMBOS : next.excluded());
+    }
+
+    /**
+     * 소진된 조합 수: [전체, 케이스1..5] (지금 가운데 번호 기준으로 각 조건을 만족하는 저장 조합 수)
+     * 제외 조합은 후보에 없으니 소진에서도 뺀다.
+     */
+    private long[] usedCounts(Collection<List<Integer>> taken, List<Integer> center, List<Integer> prev, Set<Long> excluded) {
         long[] used = new long[6];
         for (List<Integer> nums : taken) {
+            if (AnalysisService.isExcluded(nums, excluded)) continue;
             used[0]++;
             boolean[] h = AnalysisService.caseHits(nums, center, prev);
             for (int c = 0; c < 5; c++) if (h[c]) used[c + 1]++;
@@ -63,12 +72,12 @@ public class TicketService {
 
         List<Integer> center = next == null ? List.of() : next.center();
         List<Integer> prev = next == null ? List.of() : next.prevNumbers();
-        long[] used = usedCounts(taken, center, prev);
+        long[] used = usedCounts(taken, center, prev, AnalysisService.excludedMasks(all));
 
         List<Map<String, Object>> cases = new ArrayList<>();
-        cases.add(poolRow(0, 8_145_060L, used[0]));
+        cases.add(poolRow(0, randomTotal(next), used[0]));
         for (int c = 1; c <= 5; c++) {
-            long total = next == null ? 0 : NumberGenerator.candidates(c, center.size(), next.prevInCenter());
+            long total = next == null ? 0 : next.candidates()[c - 1];
             cases.add(poolRow(c, total, used[c]));
         }
         Map<String, Object> out = new LinkedHashMap<>();
@@ -102,13 +111,14 @@ public class TicketService {
 
         List<Integer> center = next == null ? List.of() : next.center();
         List<Integer> prev = next == null ? List.of() : next.prevNumbers();
-        long candidates = next == null ? 8_145_060L : NumberGenerator.candidates(caseNo, center.size(), next.prevInCenter());
+        long candidates = caseNo == 0 ? randomTotal(next) : next.candidates()[caseNo - 1];
         if (candidates == 0) throw new IllegalArgumentException("지금 기준으로는 이 가설을 만족하는 조합이 없습니다. 신뢰구간을 바꿔 보세요.");
 
         // 이미 다른 회원(또는 내)가 저장한 조합은 빼고, 서로 다른 조합으로 count개
         int round = nextRound(all);
         Set<List<Integer>> taken = takenSets(round);
-        long used = usedCounts(taken, center, prev)[caseNo];
+        Set<Long> excluded = AnalysisService.excludedMasks(all);   // 과거 당첨 조합 + 모양 조합
+        long used = usedCounts(taken, center, prev, excluded)[caseNo];
         long remaining = Math.max(0, candidates - used);
         if (remaining == 0) throw new IllegalArgumentException("이 가설의 조합이 모두 소진되었습니다. 다른 가설을 골라 보세요.");
 
@@ -116,7 +126,7 @@ public class TicketService {
         int target = (int) Math.min(count, remaining);
         for (int tries = 0; sets.size() < target && tries < 5000; tries++) {
             List<Integer> s = NumberGenerator.generate(caseNo, center, prev, RANDOM);
-            if (!taken.contains(s)) sets.add(s);
+            if (!taken.contains(s) && !AnalysisService.isExcluded(s, excluded)) sets.add(s);
         }
 
         Map<String, Object> out = new LinkedHashMap<>();

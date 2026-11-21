@@ -15,6 +15,7 @@ export default function DrawAdmin({ username }) {
   const [busy, setBusy] = useState(false)
   const [round, setRound] = useState('')
   const [nums, setNums] = useState(EMPTY)
+  const [bonus, setBonus] = useState('')
   const [editing, setEditing] = useState(null) // 수정 중인 회차
   const formRef = useRef(null)
 
@@ -45,7 +46,7 @@ export default function DrawAdmin({ username }) {
     e.target.value = ''
   }
 
-  const resetForm = () => { setRound(''); setNums(EMPTY); setEditing(null) }
+  const resetForm = () => { setRound(''); setNums(EMPTY); setBonus(''); setEditing(null) }
 
   const onSave = async (e) => {
     e.preventDefault()
@@ -53,13 +54,14 @@ export default function DrawAdmin({ username }) {
     if (!r) return
     const exists = !editing && data?.draws.some((d) => d.round === r)
     if (exists && !window.confirm(`${r}회가 이미 있습니다. 덮어쓸까요?`)) return
-    if (await run(() => addDraw(r, nums.map(Number)))) resetForm()
+    if (await run(() => addDraw(r, nums.map(Number), Number(bonus)))) resetForm()
   }
 
   const onEdit = (d) => {
     setEditing(d.round)
     setRound(String(d.round))
     setNums(d.numbers.map(String))
+    setBonus(d.bonus == null ? '' : String(d.bonus))
     formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
@@ -92,7 +94,7 @@ export default function DrawAdmin({ username }) {
               <div className="card-label">저장된 회차</div>
               <div className="card-stat">{data ? data.total.toLocaleString() : '-'}</div>
               <div className="card-row"><span>최신 회차</span><span className="num">{latest ? `${latest.round}회` : '-'}</span></div>
-              <div className="card-row"><span>최신 당첨 번호</span><span className="num">{latest ? latest.numbers.join(' · ') : '-'}</span></div>
+              <div className="card-row"><span>최신 당첨 번호</span><span className="num">{latest ? latest.numbers.join(' · ') + (latest.bonus != null ? ` + ${latest.bonus}` : '') : '-'}</span></div>
             </div>
           </div>
         </div>
@@ -102,7 +104,7 @@ export default function DrawAdmin({ username }) {
         <div className="container">
           <div className="section-head">
             <h2 className="display-sm">회차 등록</h2>
-            <p>엑셀은 B열 회차, C~H열 번호 6개 형식이며 첫 줄은 제목으로 건너뜁니다. 같은 회차를 다시 올리면 덮어씁니다.</p>
+            <p>엑셀은 B열 회차, C~H열 번호 6개, I열 보너스 번호 형식이며 첫 줄은 제목으로 건너뜁니다. 같은 회차를 다시 올리면 덮어씁니다.</p>
           </div>
           <div className="grid-2">
             <div className="feature-card">
@@ -115,7 +117,7 @@ export default function DrawAdmin({ username }) {
             <div className="feature-card" ref={formRef}>
               <div className="title-md">{editing ? `${editing}회 수정` : '새 회차 추가'}</div>
               <p className="caption">
-                {editing ? '번호를 고친 뒤 저장하세요.' : `당첨 번호 6개를 입력하세요. 회차를 비우면 ${data ? `${data.nextRound}회` : '다음 회차'}로 저장합니다.`}
+                {editing ? '번호를 고친 뒤 저장하세요.' : `당첨 번호 6개와 보너스 번호를 입력하세요. 회차를 비우면 ${data ? `${data.nextRound}회` : '다음 회차'}로 저장합니다.`}
               </p>
               <form onSubmit={onSave}>
                 <div>
@@ -124,13 +126,16 @@ export default function DrawAdmin({ username }) {
                          value={round} disabled={!!editing} onChange={(e) => setRound(e.target.value)} />
                 </div>
                 <div>
-                  <label className="field-label">당첨 번호</label>
-                  <div className="num-grid">
+                  <label className="field-label">당첨 번호 + 보너스</label>
+                  <div className="num-grid with-bonus">
                     {nums.map((v, i) => (
                       <input key={i} className="input" type="number" min="1" max="45" required value={v}
                              aria-label={`번호 ${i + 1}`}
                              onChange={(e) => setNums(nums.map((x, j) => (j === i ? e.target.value : x)))} />
                     ))}
+                    <span className="plus" aria-hidden="true">+</span>
+                    <input className="input" type="number" min="1" max="45" required value={bonus}
+                           aria-label="보너스 번호" onChange={(e) => setBonus(e.target.value)} />
                   </div>
                 </div>
                 <div className="form-actions">
@@ -162,7 +167,7 @@ export default function DrawAdmin({ username }) {
                       {data.draws.map((d) => (
                         <tr key={d.round} className={editing === d.round ? 'editing' : ''}>
                           <td className="num">{d.round}</td>
-                          <td><Balls numbers={d.numbers} /></td>
+                          <td><Balls numbers={d.numbers} bonus={d.bonus} />{d.bonus == null && <span className="caption"> 보너스 없음</span>}</td>
                           <td>
                             <div className="row-actions">
                               <button className="btn btn-secondary btn-sm" type="button" onClick={() => onEdit(d)} disabled={busy}>수정</button>

@@ -47,8 +47,8 @@ public class ApiController {
         return tickets.pool(conf);
     }
 
-    /** 새 회차 입력 요청 본문 {"round": 1247, "numbers": [1,2,3,4,5,6]} */
-    public record DrawRequest(int round, List<Integer> numbers) {}
+    /** 새 회차 입력 요청 본문 {"round": 1247, "numbers": [1,2,3,4,5,6], "bonus": 7} */
+    public record DrawRequest(int round, List<Integer> numbers, Integer bonus) {}
 
     /** 회차 목록: 최근 limit개(최신순) + 전체 개수 + 다음 회차 */
     @GetMapping("/draws")
@@ -59,7 +59,13 @@ public class ApiController {
 
         List<Map<String, Object>> recent = new ArrayList<>(all.stream()
                 .skip(Math.max(0, total - Math.max(1, limit)))
-                .map(d -> Map.<String, Object>of("round", d.getRound(), "numbers", d.numbers()))
+                .map(d -> {
+                    Map<String, Object> m = new java.util.HashMap<>();
+                    m.put("round", d.getRound());
+                    m.put("numbers", d.numbers());
+                    m.put("bonus", d.getBonus());   // 없으면 null
+                    return m;
+                })
                 .toList());
         Collections.reverse(recent);   // 최신 회차가 위로 (Java 17에는 List.reversed()가 없음)
 
@@ -73,12 +79,14 @@ public class ApiController {
         boolean valid = req.round() >= 1 && n != null && n.size() == 6
                 && n.stream().allMatch(v -> v != null && v >= 1 && v <= 45)
                 && new HashSet<>(n).size() == 6;
+        Integer b = req.bonus();
+        if (valid && b != null && (b < 1 || b > 45 || n.contains(b))) valid = false;
         if (!valid) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("message", "회차와, 1~45 사이의 서로 다른 번호 6개를 입력하세요."));
+                    .body(Map.of("message", "회차와, 1~45 사이의 서로 다른 번호 6개 + 보너스 번호(6개와 다른 번호)를 입력하세요."));
         }
         List<Integer> s = n.stream().sorted().toList();
-        repo.save(new Draw(req.round(), s.get(0), s.get(1), s.get(2), s.get(3), s.get(4), s.get(5)));
+        repo.save(new Draw(req.round(), s.get(0), s.get(1), s.get(2), s.get(3), s.get(4), s.get(5), b));
         drawEvents.drawChanged("saved", req.round());   // 마이페이지 결과 즉시 갱신
         return ResponseEntity.ok(Map.of("message", req.round() + "회를 저장했습니다."));
     }
@@ -94,13 +102,16 @@ public class ApiController {
         return ResponseEntity.ok(Map.of("message", round + "회를 삭제했습니다."));
     }
 
-    /** 엑셀 업로드 (B열 회차, C~H열 번호 6개) */
+    /** 엑셀 업로드 (B열 회차, C~H열 번호 6개, I열 보너스 번호) */
     @PostMapping("/draws/upload")
     public ResponseEntity<Map<String, Object>> upload(@RequestParam("file") MultipartFile file) {
         try {
-            int count = importService.importExcel(file.getInputStream());
+            var r = importService.importExcel(file.getInputStream());
             drawEvents.drawChanged("uploaded", null);
-            return ResponseEntity.ok(Map.of("message", count + "개 회차를 저장했습니다.", "count", count));
+            int missing = r.saved() - r.withBonus();
+            String msg = r.saved() + "개 회차를 저장했습니다 (보너스 번호 " + r.withBonus() + "개)."
+                    + (missing > 0 ? " 보너스 번호가 없는 회차가 " + missing + "개 있습니다. I열을 확인해 주세요." : "");
+            return ResponseEntity.ok(Map.of("message", msg, "count", r.saved(), "withBonus", r.withBonus()));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(Map.of("message", "엑셀을 읽지 못했습니다: " + e.getMessage()));
@@ -117,18 +128,25 @@ public class ApiController {
         List<Draw> draws = repo.findAllByOrderByRoundAsc();
         var rows = analysis.analyze(draws, conf, min);
 
-        List<Map<String, Object>> rowDtos = rows.stream().map(a -> Map.<String, Object>of(
-                "round", a.round(),
-                "numbers", a.numbers(),
-                "center", a.center().stream().sorted().toList(),
-                "hits", IntStream.rangeClosed(1, 5).mapToObj(a::hit).toList(),
-                "candidates", Arrays.stream(a.candidates()).boxed().toList()   // 케이스 1~5 후보 조합 수
-        )).toList();
+        List<Map<String, Object>> rowDtos = rows.stream().map(a -> {
+            Map<String, Object> m = new java.util.HashMap<>();
+            m.put("round", a.round());
+            m.put("numbers", a.numbers());
+            m.put("bonus", a.bonus());   // 없으면 null
+            m.put("center", a.center().stream().sorted().toList());
+            m.put("hits", IntStream.rangeClosed(1, 5).mapToObj(a::hit).toList());
+            m.put("candidates", Arrays.stream(a.candidates()).boxed().toList());   // 케이스 1~5 후보 조합 수
+            m.put("prizes", Arrays.stream(a.prizes())                              // [케이스][1~5등] 조합 수
+                    .map(r -> Arrays.stream(r).boxed().toList()).toList());
+            return m;
+        }).toList();
 
         Map<String, Object> result = new java.util.HashMap<>(Map.of(
                 "conf", conf, "min", min, "totalDraws", draws.size(),
                 "stats", analysis.summarize(rows), "rows", rowDtos));
         result.put("next", analysis.outlook(draws, conf));   // 데이터가 없으면 null
+        result.put("exclusions", analysis.exclusionSummary(draws));   // 제외 규칙별 조합 수·실제·기대 횟수
+        result.put("missingBonus", draws.stream().filter(d -> d.getBonus() == null).count());   // 보너스 번호가 없는 회차 수
         return result;
     }
 }

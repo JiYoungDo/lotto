@@ -48,7 +48,7 @@ export default function Draws() {
               <div className="card-label">저장된 회차</div>
               <div className="card-stat">{data ? data.total.toLocaleString() : '-'}</div>
               <div className="card-label" style={{ marginBottom: 8 }}>최신 당첨 번호</div>
-              <div>{latest ? <Balls numbers={latest.numbers} /> : <span className="num">-</span>}</div>
+              <div>{latest ? <Balls numbers={latest.numbers} bonus={latest.bonus} /> : <span className="num">-</span>}</div>
             </div>
           </div>
         </div>
