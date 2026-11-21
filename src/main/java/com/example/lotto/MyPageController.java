@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 /** 마이페이지 (로그인한 회원 본인만): 가설로 번호 생성, 구매 번호 저장·메모·삭제, 결과 확인 */
@@ -23,12 +24,21 @@ public class MyPageController {
 
     public record MemoRequest(String memo) {}
 
-    /** 다음 회차 번호 생성. caseNo: 0 무작위, 1~5 가설 */
+    /** 다음 회차 번호 생성. caseNo: 0 무작위, 1~5 가설, exclude: 뺄 번호 (예: exclude=7,12) */
     @GetMapping("/generate")
     public Map<String, Object> generate(@RequestParam(defaultValue = "1") int caseNo,
                                         @RequestParam(defaultValue = "5") int count,
-                                        @RequestParam(defaultValue = "60") double conf) {
-        return tickets.generate(caseNo, count, conf);
+                                        @RequestParam(defaultValue = "60") double conf,
+                                        @RequestParam(required = false) List<Integer> exclude) {
+        return tickets.generate(caseNo, count, conf, exclude);
+    }
+
+    /** 번호판 미리보기: 가설에 쓰는 번호, 뺀 번호를 반영한 후보·남은 조합 수 */
+    @GetMapping("/generate/options")
+    public Map<String, Object> generateOptions(@RequestParam(defaultValue = "1") int caseNo,
+                                               @RequestParam(defaultValue = "60") double conf,
+                                               @RequestParam(required = false) List<Integer> exclude) {
+        return tickets.options(caseNo, conf, exclude);
     }
 
     @GetMapping("/tickets")

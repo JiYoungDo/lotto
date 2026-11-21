@@ -17,6 +17,18 @@ class NumberGeneratorTest {
     private long overlap(List<Integer> n) { return n.stream().filter(prev::contains).count(); }
 
     @Test
+    void 뺀_번호는_나오지_않는다() {
+        Set<Integer> removed = Set.of(1, 3, 5, 7, 40, 44);
+        for (int i = 0; i < 300; i++) {
+            for (int c = 0; c <= 5; c++) {
+                List<Integer> n = NumberGenerator.generate(c, center, prev, removed, rnd);
+                assertTrue(n.stream().noneMatch(removed::contains), "가설 " + c + ": " + n);
+                if (c == 3) assertEquals(1, overlap(n));   // 직전 회차 가운데 번호 중 남은 12만 쓸 수 있음
+            }
+        }
+    }
+
+    @Test
     void 만든_번호는_각_가설의_조건을_만족한다() {
         for (int i = 0; i < 500; i++) {
             List<Integer> c1 = NumberGenerator.generate(1, center, prev, rnd);

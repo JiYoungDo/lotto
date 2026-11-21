@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
-import { generateNumbers, fetchMyTickets, saveTickets, updateTicketMemo, deleteTicket } from '../api.js'
+import { generateNumbers, fetchGenerateOptions, fetchMyTickets, saveTickets, updateTicketMemo, deleteTicket } from '../api.js'
+import { ballRange } from '../ball.js'
 import { useAuth } from '../auth.js'
 import Balls from '../components/Balls.jsx'
 import { CASE_GUIDE, sourceLabel, summaryLabel } from '../hypotheses.js'
@@ -18,6 +19,61 @@ const PICKS = [
   ...CASE_GUIDE.map((g, i) => ({ caseNo: i + 1, title: g.title, desc: g.desc, pips: g.pips })),
 ]
 const pct = (v) => `${(v * 100).toFixed(2)}%`
+const ALL_NUMBERS = Array.from({ length: 45 }, (_, i) => i + 1)
+
+// 가설별로 번호판 위에 표시할 번호 종류
+function numberKind(n, opt) {
+  if (!opt.usable.includes(n)) return 'unused'
+  if (opt.caseNo === 0) return 'any'
+  return opt.center.includes(n) ? 'center' : 'edge'
+}
+const KIND_LABEL = { center: '가운데 번호', edge: '양끝 번호', any: '번호', unused: '이 가설에서는 쓰지 않는 번호' }
+
+// 번호판: 이 가설의 조합에 들어갈 수 있는 번호를 보여 주고, 누르면 빼거나 되돌림
+function NumberBoard({ opt, removed, onToggle, onReset }) {
+  const usable = opt.usable.filter((n) => !removed.includes(n))
+  const prevCenter = opt.caseNo === 3 ? opt.prevNumbers.filter((n) => opt.center.includes(n) && !removed.includes(n)) : []
+  return (
+    <div className="num-board">
+      <div className="num-board-head">
+        <div>
+          <div className="title-md" style={{ fontSize: 16 }}>이 가설에 쓰는 번호 {usable.length}개</div>
+          <p className="caption">빼고 싶은 번호를 누르면 그 번호가 든 조합은 만들지 않습니다. 다시 누르면 돌아옵니다.</p>
+        </div>
+        {removed.length > 0 && (
+          <button className="btn btn-secondary btn-sm" type="button" onClick={onReset}>뺀 번호 {removed.length}개 모두 되돌리기</button>
+        )}
+      </div>
+      <div className="num-board-grid">
+        {ALL_NUMBERS.map((n) => {
+          const kind = numberKind(n, opt)
+          const off = removed.includes(n)
+          const prev = opt.prevNumbers.includes(n)
+          return (
+            <button key={n} type="button" disabled={kind === 'unused'} aria-pressed={!off}
+                    className={`ball r${ballRange(n)} board-ball ${kind}` + (off ? ' removed' : '') + (prev && kind !== 'unused' ? ' prev' : '')}
+                    title={`${n}번 · ${KIND_LABEL[kind]}${prev ? ' · 직전 회차 번호' : ''}${kind === 'unused' ? '' : off ? ' · 눌러서 되돌리기' : ' · 눌러서 빼기'}`}
+                    onClick={() => onToggle(n)}>
+              {n}
+            </button>
+          )
+        })}
+      </div>
+      <div className="case-legend board-legend" aria-hidden="true">
+        {opt.caseNo !== 0 && <span><i className="board-key center" />가운데 번호</span>}
+        {(opt.caseNo === 4 || opt.caseNo === 5) && <span><i className="board-key edge" />양끝 번호</span>}
+        <span><i className="board-key prev" />직전 회차 번호</span>
+        <span><i className="board-key removed" />뺀 번호</span>
+        {opt.caseNo !== 0 && opt.caseNo < 4 && <span><i className="board-key unused" />이 가설에서 쓰지 않는 번호</span>}
+      </div>
+      <p className="caption board-summary">
+        {removed.length > 0 && <>뺀 번호 <b className="num">{removed.join(', ')}</b> · </>}
+        후보 {opt.candidates.toLocaleString()}개 조합 중 <b>{opt.remaining.toLocaleString()}개 남음</b>
+        {opt.caseNo === 3 && ` · 직전 회차 가운데 번호 ${prevCenter.length}개 중 1개를 꼭 씁니다`}
+      </p>
+    </div>
+  )
+}
 
 // 마이페이지: 가설로 다음 회차 번호를 만들고, 골라서 저장하고, 추첨 결과를 확인
 export default function MyPage() {
@@ -189,12 +245,28 @@ function Generator({ nextRound, onSaved }) {
   const [memo, setMemo] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  const [removed, setRemoved] = useState([]) // 번호판에서 뺀 번호
+  const [opt, setOpt] = useState(null)       // 번호판 미리보기 (가설에 쓰는 번호, 후보 수)
+  const [optError, setOptError] = useState(null)
+
+  const confNum = Number(conf)
+  const confOk = conf !== '' && confNum >= 1 && confNum <= 99
+  useEffect(() => {
+    if (!confOk) return
+    let alive = true
+    fetchGenerateOptions(caseNo, confNum, removed)
+      .then((o) => { if (alive) { setOpt(o); setOptError(null) } })
+      .catch((e) => { if (alive) setOptError(e.message) })
+    return () => { alive = false }
+  }, [caseNo, confNum, confOk, removed])
+
+  const toggle = (n) => setRemoved((r) => (r.includes(n) ? r.filter((x) => x !== n) : [...r, n].sort((a, b) => a - b)))
 
   const make = async () => {
     setBusy(true)
     setError(null)
     try {
-      const g = await generateNumbers(caseNo, Number(count), Number(conf))
+      const g = await generateNumbers(caseNo, Number(count), Number(conf), removed)
       setGen(g)
       setPicked(g.sets.map(() => true))
     } catch (e) {
@@ -258,12 +330,15 @@ function Generator({ nextRound, onSaved }) {
             <button className="btn btn-primary" type="button" onClick={make} disabled={busy}>{gen ? '다시 만들기' : '번호 만들기'}</button>
           </div>
           {error && <p className="notice">{error}</p>}
+          {optError && <p className="notice">{optError}</p>}
+          {opt && opt.caseNo === caseNo && <NumberBoard opt={opt} removed={removed} onToggle={toggle} onReset={() => setRemoved([])} />}
 
           {gen && (
             <div className="gen-result">
               <p className="caption">
                 {gen.round}회 · {sourceLabel(gen.caseNo)}
                 {gen.caseNo !== 0 && ` · 신뢰구간 ${gen.conf}% · 가운데 번호 ${gen.center.length}개`}
+                {gen.removed?.length > 0 && ` · 뺀 번호 ${gen.removed.join(', ')}`}
                 {' · '}후보 {gen.candidates.toLocaleString()}개 조합 중 <b>{gen.remaining.toLocaleString()}개 남음</b> (소진 {gen.used.toLocaleString()}개)
                 {' · '}무작위로 나온 당첨 번호가 이 조건에 들어갈 확률 {pct(gen.probability)}
               </p>

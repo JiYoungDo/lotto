@@ -76,6 +76,34 @@ class MyPageTest {
     }
 
     @Test
+    void 번호판에서_뺀_번호는_만든_번호에_나오지_않는다() throws Exception {
+        var next = analysis.outlook(draws.findAllByOrderByRoundAsc(), 60);
+        List<Integer> center = next.center();
+        String ex = center.get(0) + "," + center.get(1);
+
+        String body = mvc.perform(get("/api/my/generate").param("caseNo", "1").param("count", "10")
+                        .param("exclude", ex).with(user("buyer").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.removed.length()").value(2))
+                .andExpect(jsonPath("$.usable.length()").value(center.size()))
+                .andReturn().getResponse().getContentAsString();
+        List<Integer> nums = com.jayway.jsonpath.JsonPath.read(body, "$.sets[*][*]");
+        assertFalse(nums.isEmpty());
+        assertFalse(nums.contains(center.get(0)));
+        assertFalse(nums.contains(center.get(1)));
+
+        // 미리보기: 빼면 후보 수가 줄어든다
+        long full = next.candidates()[0];
+        mvc.perform(get("/api/my/generate/options").param("caseNo", "1").param("exclude", ex).with(user("buyer").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.candidates").value(org.hamcrest.Matchers.lessThan((int) full)));
+
+        // 범위 밖 번호는 거절
+        mvc.perform(get("/api/my/generate/options").param("caseNo", "1").param("exclude", "0,46").with(user("buyer").roles("USER")))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void 저장하고_추첨_뒤_결과를_본다() throws Exception {
         save("buyer", "{\"sets\":[[1,2,3,4,5,6],[10,11,12,13,14,15]],\"caseNo\":1,\"conf\":60,\"memo\":\"편의점\"}")
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.count").value(2));

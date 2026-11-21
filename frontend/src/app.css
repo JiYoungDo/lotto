@@ -400,6 +400,26 @@ input[type=file].input { padding: 10px 16px; height: auto; }
 .pick-card .pips { margin: 6px 0 4px; }
 .pip.r { background: var(--surface-strong); border: 1px dashed var(--muted-soft); }
 .gen-result { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--hairline); }
+/* 번호 만들기 번호판: 누르면 그 번호를 빼고 다시 누르면 되돌림 */
+.num-board { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--hairline); }
+.num-board-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.num-board-grid { display: grid; grid-template-columns: repeat(9, minmax(0, 36px)); gap: 6px; }
+.board-ball { width: 100%; height: auto; aspect-ratio: 1; margin: 0; border: 0; padding: 0; cursor: pointer; position: relative; transition: opacity .15s, transform .15s; }
+.board-ball:hover:not(:disabled) { transform: translateY(-1px); }
+.board-ball:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.board-ball.edge { box-shadow: inset 0 0 0 3px rgba(255, 255, 255, .55); }
+.board-ball.prev::after { content: ''; position: absolute; right: -1px; top: -1px; width: 9px; height: 9px; border-radius: 50%; background: var(--ink); border: 2px solid var(--canvas); }
+.board-ball.unused { opacity: .18; cursor: not-allowed; }
+.board-ball.removed { opacity: .3; text-decoration: line-through; text-decoration-thickness: 2px; }
+.board-ball.removed::before { content: ''; position: absolute; inset: -2px; border-radius: 50%; border: 2px dashed var(--muted); }
+.board-legend { margin-top: 14px; }
+.board-key { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--ball-2); }
+.board-key.edge { box-shadow: inset 0 0 0 3px rgba(255, 255, 255, .55); }
+.board-key.prev { background: var(--ink); width: 9px; height: 9px; }
+.board-key.removed { background: transparent; border: 2px dashed var(--muted); }
+.board-key.unused { opacity: .18; }
+.board-summary { margin-top: 10px; }
+@media (max-width: 420px) { .num-board-grid { gap: 4px; } .board-ball { font-size: 11px; } }
 .gen-list { display: grid; gap: 8px; margin-top: 12px; }
 .gen-row { display: flex; align-items: center; gap: 14px; padding: 8px 14px; border-radius: 14px; border: 1px solid var(--hairline); cursor: pointer; flex-wrap: wrap; }
 .gen-row.on { border-color: var(--primary); background: rgba(0, 82, 255, .04); }

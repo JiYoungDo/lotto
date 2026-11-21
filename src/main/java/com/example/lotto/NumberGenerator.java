@@ -18,15 +18,23 @@ public final class NumberGenerator {
     private NumberGenerator() {}
 
     public static List<Integer> generate(int caseNo, Collection<Integer> center, Collection<Integer> prev, Random rnd) {
+        return generate(caseNo, center, prev, Set.of(), rnd);
+    }
+
+    /** removed = 사용자가 뺀 번호. 이 번호들은 어느 그룹에서도 뽑지 않는다. */
+    public static List<Integer> generate(int caseNo, Collection<Integer> center, Collection<Integer> prev,
+                                         Collection<Integer> removed, Random rnd) {
         Set<Integer> c = new TreeSet<>(center);
+        c.removeAll(removed);
         List<Integer> edge = new ArrayList<>(), centerPrev = new ArrayList<>(), centerFresh = new ArrayList<>();
         for (int n = 1; n <= 45; n++) {
+            if (removed.contains(n)) continue;
             if (!c.contains(n)) edge.add(n);
             else if (prev.contains(n)) centerPrev.add(n);
             else centerFresh.add(n);
         }
         List<Integer> all = new ArrayList<>();
-        for (int n = 1; n <= 45; n++) all.add(n);
+        for (int n = 1; n <= 45; n++) if (!removed.contains(n)) all.add(n);
 
         List<Integer> out = switch (caseNo) {
             case 0 -> pick(all, 6, rnd);

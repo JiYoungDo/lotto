@@ -40,19 +40,16 @@ public class TicketService {
         return out;
     }
 
-    /** 제외 조합(과거 당첨 조합·모양 조합)을 뺀 무작위 후보 수 */
-    private static long randomTotal(AnalysisService.NextOutlook next) {
-        return 8_145_060L - (next == null ? AnalysisService.PATTERN_COMBOS : next.excluded());
-    }
-
     /**
      * 소진된 조합 수: [전체, 케이스1..5] (지금 가운데 번호 기준으로 각 조건을 만족하는 저장 조합 수)
-     * 제외 조합은 후보에 없으니 소진에서도 뺀다.
+     * 제외 조합과, 사용자가 뺀 번호가 든 조합은 후보에 없으니 소진에서도 뺀다.
      */
-    private long[] usedCounts(Collection<List<Integer>> taken, List<Integer> center, List<Integer> prev, Set<Long> excluded) {
+    private long[] usedCounts(Collection<List<Integer>> taken, List<Integer> center, List<Integer> prev,
+                              Set<Long> excluded, Collection<Integer> removed) {
         long[] used = new long[6];
         for (List<Integer> nums : taken) {
             if (AnalysisService.isExcluded(nums, excluded)) continue;
+            if (nums.stream().anyMatch(removed::contains)) continue;
             used[0]++;
             boolean[] h = AnalysisService.caseHits(nums, center, prev);
             for (int c = 0; c < 5; c++) if (h[c]) used[c + 1]++;
@@ -72,14 +69,13 @@ public class TicketService {
 
         List<Integer> center = next == null ? List.of() : next.center();
         List<Integer> prev = next == null ? List.of() : next.prevNumbers();
-        long[] used = usedCounts(taken, center, prev, AnalysisService.excludedMasks(all));
+        Set<Long> excluded = AnalysisService.excludedMasks(all);
+        long[] totals = AnalysisService.candidatesAvoiding(center, prev, Set.of(), excluded);
+        long[] used = usedCounts(taken, center, prev, excluded, Set.of());
 
         List<Map<String, Object>> cases = new ArrayList<>();
-        cases.add(poolRow(0, randomTotal(next), used[0]));
-        for (int c = 1; c <= 5; c++) {
-            long total = next == null ? 0 : next.candidates()[c - 1];
-            cases.add(poolRow(c, total, used[c]));
-        }
+        cases.add(poolRow(0, totals[0], used[0]));
+        for (int c = 1; c <= 5; c++) cases.add(poolRow(c, next == null ? 0 : totals[c], used[c]));
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("round", round);
         out.put("conf", conf);
@@ -100,10 +96,48 @@ public class TicketService {
 
     // ---------- 번호 생성 ----------
 
-    public Map<String, Object> generate(int caseNo, int count, double conf) {
-        if (count < 1 || count > 10) throw new IllegalArgumentException("한 번에 1~10줄까지 만들 수 있습니다.");
+    /** 번호를 만들 조건: 가설·신뢰구간·사용자가 뺀 번호로 정한 번호판과 후보 수 */
+    private record Setup(int round, int caseNo, double conf, List<Integer> center, List<Integer> prev,
+                         List<Integer> usable, List<Integer> removed, long candidates, long used,
+                         Set<Long> excluded, Set<List<Integer>> taken) {
+        long remaining() { return Math.max(0, candidates - used); }
+
+        Map<String, Object> toMap() {
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("round", round);
+            out.put("caseNo", caseNo);
+            out.put("conf", conf);
+            out.put("candidates", candidates);
+            out.put("used", used);
+            out.put("remaining", remaining());
+            out.put("probability", candidates / 8_145_060.0);   // 무작위로 나온 당첨 번호가 이 가설에 들어갈 확률
+            out.put("center", center);
+            out.put("prevNumbers", prev);
+            out.put("usable", usable);     // 이 가설의 조합에 들어갈 수 있는 번호 (뺀 번호 포함)
+            out.put("removed", removed);   // 사용자가 뺀 번호
+            return out;
+        }
+    }
+
+    /** 가설별로 조합에 들어갈 수 있는 번호: 0·4·5 전체, 1·3 가운데 번호, 2 직전 회차에 없던 가운데 번호 */
+    private static List<Integer> usableNumbers(int caseNo, List<Integer> center, List<Integer> prev) {
+        List<Integer> out = new ArrayList<>();
+        for (int n = 1; n <= 45; n++) {
+            boolean ok = switch (caseNo) {
+                case 1, 3 -> center.contains(n);
+                case 2 -> center.contains(n) && !prev.contains(n);
+                default -> true;
+            };
+            if (ok) out.add(n);
+        }
+        return out;
+    }
+
+    private Setup setup(int caseNo, double conf, Collection<Integer> removedIn) {
         if (conf < 1 || conf > 99) throw new IllegalArgumentException("신뢰구간은 1~99 사이입니다.");
         if (caseNo < 0 || caseNo > 5) throw new IllegalArgumentException("가설은 0(무작위) 또는 1~5 입니다.");
+        Set<Integer> removed = new TreeSet<>(removedIn == null ? List.of() : removedIn);
+        if (removed.stream().anyMatch(n -> n == null || n < 1 || n > 45)) throw new IllegalArgumentException("뺄 번호는 1~45 사이여야 합니다.");
 
         List<Draw> all = draws.findAllByOrderByRoundAsc();
         AnalysisService.NextOutlook next = analysis.outlook(all, conf);
@@ -111,34 +145,44 @@ public class TicketService {
 
         List<Integer> center = next == null ? List.of() : next.center();
         List<Integer> prev = next == null ? List.of() : next.prevNumbers();
-        long candidates = caseNo == 0 ? randomTotal(next) : next.candidates()[caseNo - 1];
-        if (candidates == 0) throw new IllegalArgumentException("지금 기준으로는 이 가설을 만족하는 조합이 없습니다. 신뢰구간을 바꿔 보세요.");
+        Set<Long> excluded = AnalysisService.excludedMasks(all);   // 과거 당첨 조합 + 모양 조합
+        long candidates = AnalysisService.candidatesAvoiding(center, prev, removed, excluded)[caseNo];
 
-        // 이미 다른 회원(또는 내)가 저장한 조합은 빼고, 서로 다른 조합으로 count개
+        // 이미 다른 회원(또는 내)가 저장한 조합은 소진된 것으로 본다
         int round = nextRound(all);
         Set<List<Integer>> taken = takenSets(round);
-        Set<Long> excluded = AnalysisService.excludedMasks(all);   // 과거 당첨 조합 + 모양 조합
-        long used = usedCounts(taken, center, prev, excluded)[caseNo];
-        long remaining = Math.max(0, candidates - used);
-        if (remaining == 0) throw new IllegalArgumentException("이 가설의 조합이 모두 소진되었습니다. 다른 가설을 골라 보세요.");
+        long used = usedCounts(taken, center, prev, excluded, removed)[caseNo];
+        return new Setup(round, caseNo, conf, center, prev, usableNumbers(caseNo, center, prev),
+                new ArrayList<>(removed), candidates, used, excluded, taken);
+    }
 
-        Set<List<Integer>> sets = new LinkedHashSet<>();
-        int target = (int) Math.min(count, remaining);
-        for (int tries = 0; sets.size() < target && tries < 5000; tries++) {
-            List<Integer> s = NumberGenerator.generate(caseNo, center, prev, RANDOM);
-            if (!taken.contains(s) && !AnalysisService.isExcluded(s, excluded)) sets.add(s);
+    /** 번호판 미리보기: 가설에 쓰는 번호와, 뺀 번호를 반영한 후보·남은 조합 수 */
+    public Map<String, Object> options(int caseNo, double conf, Collection<Integer> removed) {
+        return setup(caseNo, conf, removed).toMap();
+    }
+
+    public Map<String, Object> generate(int caseNo, int count, double conf) {
+        return generate(caseNo, count, conf, List.of());
+    }
+
+    public Map<String, Object> generate(int caseNo, int count, double conf, Collection<Integer> removed) {
+        if (count < 1 || count > 10) throw new IllegalArgumentException("한 번에 1~10줄까지 만들 수 있습니다.");
+        Setup s = setup(caseNo, conf, removed);
+        if (s.candidates() == 0) {
+            throw new IllegalArgumentException(s.removed().isEmpty()
+                    ? "지금 기준으로는 이 가설을 만족하는 조합이 없습니다. 신뢰구간을 바꿔 보세요."
+                    : "뺀 번호가 많아 이 가설을 만족하는 조합이 없습니다. 번호를 몇 개 되돌려 보세요.");
         }
+        if (s.remaining() == 0) throw new IllegalArgumentException("이 가설의 조합이 모두 소진되었습니다. 다른 가설을 골라 보세요.");
 
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("round", round);
-        out.put("caseNo", caseNo);
-        out.put("conf", conf);
-        out.put("candidates", candidates);
-        out.put("used", used);
-        out.put("remaining", remaining);
-        out.put("probability", candidates / 8_145_060.0);   // 무작위로 나온 당첨 번호가 이 가설에 들어갈 확률
-        out.put("center", center);
-        out.put("prevNumbers", prev);
+        // 저장된 조합·제외 조합은 빼고, 서로 다른 조합으로 count개
+        Set<List<Integer>> sets = new LinkedHashSet<>();
+        int target = (int) Math.min(count, s.remaining());
+        for (int tries = 0; sets.size() < target && tries < 5000; tries++) {
+            List<Integer> nums = NumberGenerator.generate(caseNo, s.center(), s.prev(), s.removed(), RANDOM);
+            if (!s.taken().contains(nums) && !AnalysisService.isExcluded(nums, s.excluded())) sets.add(nums);
+        }
+        Map<String, Object> out = s.toMap();
         out.put("sets", new ArrayList<>(sets));
         return out;
     }

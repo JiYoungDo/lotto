@@ -173,6 +173,38 @@ class AnalysisServiceTest {
     }
 
     @Test
+    void 뺀_번호를_반영한_후보_수는_직접_세어본_값과_같다() {
+        List<Draw> draws = randomDraws(80);
+        var next = service.outlook(draws, 60);
+        Set<Long> excluded = AnalysisService.excludedMasks(draws);
+
+        // 뺀 번호가 없으면 다음 회차 후보 수와 같다
+        long[] none = AnalysisService.candidatesAvoiding(next.center(), next.prevNumbers(), Set.of(), excluded);
+        assertEquals(8145060L - next.excluded(), none[0]);
+        for (int c = 0; c < 5; c++) assertEquals(next.candidates()[c], none[c + 1]);
+
+        // 가운데 번호 2개, 양끝 번호 1개, 직전 회차 번호 1개를 빼고 전부 세어 보기
+        List<Integer> center = next.center(), prev = next.prevNumbers();
+        Set<Integer> removed = new HashSet<>(List.of(center.get(0), center.get(3)));
+        for (int n = 1; n <= 45; n++) if (!center.contains(n)) { removed.add(n); break; }
+        removed.add(prev.get(0));
+
+        long[] brute = new long[6];
+        int[] x = new int[6];
+        for (x[0] = 1; x[0] <= 40; x[0]++) for (x[1] = x[0] + 1; x[1] <= 41; x[1]++)
+        for (x[2] = x[1] + 1; x[2] <= 42; x[2]++) for (x[3] = x[2] + 1; x[3] <= 43; x[3]++)
+        for (x[4] = x[3] + 1; x[4] <= 44; x[4]++) for (x[5] = x[4] + 1; x[5] <= 45; x[5]++) {
+            List<Integer> nums = List.of(x[0], x[1], x[2], x[3], x[4], x[5]);
+            if (nums.stream().anyMatch(removed::contains)) continue;
+            if (AnalysisService.isExcluded(nums, excluded)) continue;
+            brute[0]++;
+            boolean[] h = AnalysisService.caseHits(nums, center, prev);
+            for (int c = 0; c < 5; c++) if (h[c]) brute[c + 1]++;
+        }
+        assertArrayEquals(brute, AnalysisService.candidatesAvoiding(center, prev, removed, excluded));
+    }
+
+    @Test
     void 모양_조합_판별() {
         assertTrue(AnalysisService.isPattern(List.of(40, 41, 42, 43, 44, 45)));   // 6연속
         assertTrue(AnalysisService.isPattern(List.of(3, 1, 2, 6, 5, 4)));

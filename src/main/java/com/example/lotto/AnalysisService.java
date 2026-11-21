@@ -188,6 +188,37 @@ public class AnalysisService {
         return s;
     }
 
+    /**
+     * 사용자가 뺀 번호(removed)가 하나도 없는 조합만 셀 때의 후보 수: [무작위, 케이스1..5].
+     * 제외 조합(excluded)도 뺀다. removed 가 비어 있으면 NextOutlook.candidates 와 같다.
+     */
+    public static long[] candidatesAvoiding(Collection<Integer> center, Collection<Integer> prev,
+                                            Collection<Integer> removed, Set<Long> excluded) {
+        int k = 0, m = 0, e = 0, all = 0;
+        for (int n = 1; n <= 45; n++) {
+            if (removed.contains(n)) continue;
+            all++;
+            if (center.contains(n)) { k++; if (prev.contains(n)) m++; }
+            else e++;
+        }
+        long[] out = {
+                Math.round(comb(all, 6)),
+                Math.round(comb(k, 6)),
+                Math.round(comb(k - m, 6)),
+                Math.round(m * comb(k - m, 5)),
+                Math.round(comb(k, 4) * comb(e, 2)),
+                Math.round(comb(k, 5) * e)
+        };
+        long rm = mask(removed), cm = mask(center), pm = mask(prev);
+        for (long x : excluded) {
+            if ((x & rm) != 0) continue;
+            out[0]--;
+            boolean[] h = caseHits(x, cm, pm);
+            for (int c = 0; c < 5; c++) if (h[c]) out[c + 1]--;
+        }
+        return out;
+    }
+
     /** 이 조합이 제외 대상인지 (번호 생성·소진 집계에서 사용) */
     public static boolean isExcluded(Collection<Integer> nums, Set<Long> excluded) {
         return excluded.contains(mask(nums));
