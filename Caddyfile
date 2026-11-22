@@ -1,0 +1,7 @@
+# {$DOMAIN} 으로 들어오는 접속을 앱(app:8080)으로 넘기고, HTTPS 인증서는 자동으로 받아서 갱신합니다.
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy app:8080 {
+		flush_interval -1   # 실시간(SSE) 알림이 끊기지 않고 바로 전달되도록
+	}
+}

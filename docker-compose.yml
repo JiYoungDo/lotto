@@ -1,0 +1,40 @@
+# 서버에서 `docker compose up -d --build` 한 번으로 앱과 HTTPS 서버를 함께 켭니다.
+services:
+  app:
+    build:
+      context: .
+      args:
+        VITE_ADSENSE_CLIENT: ${VITE_ADSENSE_CLIENT:-}
+        VITE_ADSENSE_SLOT_INLINE: ${VITE_ADSENSE_SLOT_INLINE:-}
+        VITE_ADSENSE_SLOT_BOTTOM: ${VITE_ADSENSE_SLOT_BOTTOM:-}
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      LOTTO_ADMIN_USERNAME: ${LOTTO_ADMIN_USERNAME:-admin}
+      LOTTO_ADMIN_PASSWORD: ${LOTTO_ADMIN_PASSWORD:?.env 파일에 LOTTO_ADMIN_PASSWORD(관리자 비밀번호)를 적어 주세요}
+      JAVA_TOOL_OPTIONS: -Xmx512m
+      TZ: Asia/Seoul
+    volumes:
+      - lotto-data:/app/data
+    expose:
+      - "8080"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?.env 파일에 DOMAIN(내 도메인)을 적어 주세요}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  lotto-data:
+  caddy-data:
+  caddy-config:

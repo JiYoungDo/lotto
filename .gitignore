@@ -44,3 +44,7 @@ out/
 
 ### H2 DB 파일 (회원 정보가 들어 있어 git에 올리지 않음) ###
 /data/*.mv.db
+
+### Deploy ###
+.env
+/backups/

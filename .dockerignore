@@ -1,0 +1,14 @@
+.git
+.idea
+*.iml
+.gradle
+build
+out
+data
+config
+backups
+.env
+**/.DS_Store
+frontend/node_modules
+frontend/dist
+frontend/.env*
