@@ -82,6 +82,7 @@ export default function Analysis() {
   const hidden = data ? Math.max(0, data.rows.length - visible) : 0 // 아직 안 보인 이전 회차 수
   const next = data?.next
   const best = data?.stats.length ? data.stats.reduce((a, b) => (b.pValue < a.pValue ? b : a)) : null
+  const totalHits = data ? data.stats.reduce((sum, s) => sum + s.hits, 0) : 0 // 가설끼리 겹치지 않아 그대로 더함
 
   return (
     <>
@@ -100,7 +101,7 @@ export default function Analysis() {
             <div className="card-dark card-main">
               <div className="card-label">분석한 회차</div>
               <div className="card-stat">{data ? data.rows.length.toLocaleString() : '-'}</div>
-              <div className="card-row"><span>케이스 1 적중</span><span className="num">{data && data.stats[0] ? `${data.stats[0].hits} / ${data.stats[0].total}` : '-'}</span></div>
+              <div className="card-row"><span>가설 1~9 중 하나라도 적중</span><span className="num">{data && data.stats[0] ? `${totalHits} / ${data.stats[0].total}` : '-'}</span></div>
               <div className="card-row"><span>가장 유의한 케이스</span><span className="num">{best ? `${best.caseNo} (p ${fmtP(best.pValue)})` : '-'}</span></div>
               <div className="card-row"><span>최소 회차</span><span className="num">{data ? data.min : '-'}</span></div>
             </div>
@@ -135,7 +136,7 @@ export default function Analysis() {
                 <p>반 친구들 성적을 떠올려 보세요. 평균 근처에 가장 많은 친구가 모여 있죠. 60%로 정하면 ‘평균 근처에 모인 60%’ 안에 드는 번호를 가운데 번호로 삼습니다. 계산으로는 출현 횟수가 <b>평균 ± z × 표준편차</b> 안에 드는 번호입니다. 출현 횟수는 당첨 번호 6개와 보너스 번호 1개를 모두 누적해 세므로 평균은 회차 수 × 7 ÷ 45입니다 (50% → z 0.674, 60% → 0.842, 80% → 1.282, 95% → 1.960).</p>
                 <p>그물을 넓게 던지면 고기가 더 잘 걸리지만, 아무렇게나 던져도 잘 걸리는 건 마찬가지입니다. 값을 올리면 적중이 늘어나는 대신 무작위 기대 비율도 같이 올라가니, 적중 횟수보다 기대 비율과의 차이와 p-값을 봐 주세요. 교과서의 ‘평균을 추정하는 신뢰구간’과는 다르고, 정규분포의 비율을 범위 폭의 기준으로만 빌려 씁니다.</p>
                 {next && (
-                  <p className="setting-now">현재 적용: {data.conf}% → z = {next.z.toFixed(3)}, {next.round}회 기준 가운데 번호 {next.center.length}개</p>
+                  <p className="setting-now">현재 적용: {data.conf}% → z = {next.z.toFixed(3)}, {next.round}회 기준 가운데 번호 {next.center.length}개, 많은 양끝 번호 {next.high.length}개</p>
                 )}
               </div>
               <div>
@@ -207,7 +208,7 @@ export default function Analysis() {
             <div className="exclude-block">
               <div className="section-head">
                 <h3 className="display-xs">직전 회차 번호가 다음 회차에 다시 나온 횟수</h3>
-                <p>바로 앞 회차 당첨 번호 6개 중 몇 개가 다음 회차 당첨 번호 6개에 다시 들어 있었는지 셉니다 (보너스 번호 제외, 신뢰구간·최소 회차와 상관없이 전체 회차 기준). 케이스 2·3이 기대는 ‘직전 회차 번호’가 실제로 얼마나 자주 돌아오는지 확인하는 표입니다.</p>
+                <p>바로 앞 회차 당첨 번호 6개 중 몇 개가 다음 회차 당첨 번호 6개에 다시 들어 있었는지 셉니다 (보너스 번호 제외, 신뢰구간·최소 회차와 상관없이 전체 회차 기준). 가설 2·3·5·6·8·9가 기대는 ‘직전 회차 번호가 1~2개 다시 나온다’는 생각이 실제로 얼마나 맞는지 확인하는 표입니다.</p>
               </div>
               <div className="feature-card">
                 <p className="title-md" style={{ marginTop: 0 }}>
@@ -299,18 +300,23 @@ export default function Analysis() {
           <div className="container">
             <div className="section-head">
               <h2 className="display-sm">{next.round}회 기준</h2>
-              <p>지금까지의 {data.totalDraws.toLocaleString()}개 회차로 계산한 다음 회차의 가운데 번호입니다. 흐린 공은 양끝(가운데가 아닌) 번호입니다. 참고용일 뿐 당첨 확률을 바꾸지 않습니다.</p>
+              <p>지금까지의 {data.totalDraws.toLocaleString()}개 회차로 계산한 다음 회차의 번호 묶음입니다. 가설은 직전 회차 번호, 직전 회차를 뺀 가운데 번호, 직전 회차를 뺀 많은 양끝 번호만 씁니다. 참고용일 뿐 당첨 확률을 바꾸지 않습니다.</p>
             </div>
             <div className="grid-2">
               <div className="feature-card">
                 <div className="title-md">가운데 번호 {next.center.length}개</div>
-                <p className="caption" style={{ marginBottom: 16 }}>신뢰구간 {data.conf}% 기준</p>
+                <p className="caption" style={{ marginBottom: 16 }}>신뢰구간 {data.conf}% 기준 · 직전 회차 번호를 빼면 {next.freshCenter}개 (흐린 공은 가운데가 아닌 번호)</p>
                 <Balls numbers={ALL_NUMBERS} dim={ALL_NUMBERS.filter((n) => !next.center.includes(n))} />
+                <div className="title-md" style={{ marginTop: 24 }}>많은 양끝 번호 {next.high.length}개</div>
+                <p className="caption" style={{ marginBottom: 16 }}>가운데 범위보다 많이 나온 번호 · 직전 회차 번호를 빼면 {next.freshHigh}개</p>
+                {next.high.length > 0 ? <Balls numbers={next.high} dim={next.high.filter((n) => next.prevNumbers.includes(n))} /> : <p className="caption">없음</p>}
               </div>
               <div className="feature-card">
                 <div className="title-md">직전 회차 ({next.round - 1}회)</div>
-                <p className="caption" style={{ marginBottom: 16 }}>그중 가운데 번호 {next.prevInCenter}개</p>
-                <Balls numbers={next.prevNumbers} dim={next.prevNumbers.filter((n) => !next.center.includes(n))} />
+                <p className="caption" style={{ marginBottom: 16 }}>
+                  가운데 {next.prevNumbers.filter((n) => next.center.includes(n)).length}개 · 많은 양끝 {next.prevNumbers.filter((n) => next.high.includes(n)).length}개 · 적은 양끝 {next.prevNumbers.filter((n) => !next.center.includes(n) && !next.high.includes(n)).length}개. 가설에서는 묶음과 상관없이 ‘직전 회차 번호’로 씁니다.
+                </p>
+                <Balls numbers={next.prevNumbers} />
                 <table className="list-table" style={{ marginTop: 24 }}>
                   <thead>
                     <tr><th>케이스</th><th className="r">후보 조합 수</th><th className="r">무작위 적중 확률</th></tr>
@@ -348,7 +354,39 @@ export default function Analysis() {
         <div className="container">
           <div className="section-head">
             <h2 className="display-sm">가설 안내</h2>
-            <p>‘당첨 번호는 튀는 번호보다 평범한 번호들로 채워지지 않을까?’ 하는 질문에서 출발한 다섯 가지 가설입니다. 각 회차의 당첨 번호 6개가 아래 조건에 들어맞으면 그 케이스를 적중으로 봅니다. 가운데 번호는 그 회차 직전까지의 데이터로만 정하니, 미래를 미리 엿보지는 않습니다. 적중은 미리 번호를 골라 맞혔다는 뜻이 아니라, 당첨 번호가 그 케이스가 그린 울타리 안에 들어 있었다는 뜻입니다.</p>
+            <p>‘당첨 번호는 평범한 번호를 중심으로, 지난주 번호 한두 개와 자주 나오던 인기 번호 한두 개가 섞여 나오지 않을까?’ 하는 질문에서 출발한 아홉 가지 가설입니다. 각 회차의 당첨 번호 6개가 아래 조건에 꼭 맞으면 그 케이스를 적중으로 봅니다. 가운데·양끝 번호는 그 회차 직전까지의 데이터로만 정하니, 미래를 미리 엿보지는 않습니다. 적중은 미리 번호를 골라 맞혔다는 뜻이 아니라, 당첨 번호가 그 케이스가 그린 울타리 안에 들어 있었다는 뜻입니다.</p>
+          </div>
+          <div className="setting-help" style={{ marginTop: 0, marginBottom: 32 }}>
+            <div>
+              <h3>번호를 네 묶음으로 나눕니다</h3>
+              <p><b>직전 회차 번호</b> — 바로 앞 회차 당첨 번호 6개입니다. 가운데 번호든 양끝 번호든 상관없이 이 묶음으로 셉니다.</p>
+              <p><b>가운데 번호</b> — 직전 회차 번호를 뺀 나머지 중 출현 횟수가 평균 근처(평균 ± z × 표준편차)인 번호입니다. 개수를 a라고 씁니다.</p>
+              <p><b>많은 양끝 번호</b> — 직전 회차 번호를 뺀 나머지 중 출현 횟수가 가운데 범위보다 많은, 유난히 자주 나온 번호입니다. 개수를 b라고 씁니다.</p>
+              <p><b>적은 양끝 번호</b> — 직전 회차 번호를 뺀 나머지 중 가운데 범위보다 덜 나온 번호입니다. 어느 가설에도 쓰지 않습니다.</p>
+            </div>
+            <div>
+              <h3>아홉 가설 한눈에 보기</h3>
+              <div className="table-wrap">
+                <table className="list-table case-matrix">
+                  <thead>
+                    <tr><th>많은 양끝 \ 직전 회차</th><th className="r">0개</th><th className="r">1개</th><th className="r">2개</th></tr>
+                  </thead>
+                  <tbody>
+                    {[[0, [1, 2, 3]], [1, [7, 8, 9]], [2, [4, 5, 6]]].map(([h, cs]) => (
+                      <tr key={h}>
+                        <td>{h}개</td>
+                        {cs.map((c) => (
+                          <td key={c} className="r" title={CASES[c - 1]}>
+                            <b>가설 {c}</b><br /><span className="caption">가운데 {CASE_GUIDE[c - 1].shape[1]}개</span>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="caption" style={{ marginTop: 8 }}>칸마다 나머지는 가운데 번호로 채워 6개를 맞춥니다.</p>
+            </div>
           </div>
           <div className="case-grid">
             {CASE_GUIDE.map((g, i) => (
@@ -367,21 +405,20 @@ export default function Analysis() {
             ))}
           </div>
           <div className="case-legend" aria-hidden="true">
-            <span><i className="pip c" />가운데 번호</span>
-            <span><i className="pip e" />양끝 번호</span>
-            <span><i className="pip c p" />직전 회차에도 나온 번호</span>
-            <span><i className="pip c x" />직전 회차에 나오지 않은 번호</span>
+            <span><i className="pip p" />직전 회차 번호</span>
+            <span><i className="pip c" />가운데 번호 (직전 회차 제외)</span>
+            <span><i className="pip h" />많은 양끝 번호 (직전 회차 제외)</span>
           </div>
           <div className="setting-help">
             <div>
               <h3>케이스끼리의 관계</h3>
-              <p>케이스 2와 3은 케이스 1에 포함됩니다. 2나 3이 적중이면 1도 항상 적중입니다. 2와 3은 동시에 적중할 수 없습니다.</p>
-              <p>케이스 1, 4, 5는 가운데 번호 개수가 6, 4, 5개로 달라 서로 겹치지 않습니다.</p>
+              <p>아홉 가설은 묶음별 개수(직전 회차 · 가운데 · 많은 양끝)가 모두 달라 서로 겹치지 않습니다. 한 회차는 많아야 한 가설에만 적중하고, 가설별 적중 횟수를 그대로 더해도 됩니다.</p>
+              <p>직전 회차 번호는 가운데든 양끝이든 직전 회차 묶음으로만 셉니다. 예를 들어 직전 회차 번호이면서 많이 나온 번호는 ‘많은 양끝’이 아니라 ‘직전 회차’ 1개입니다.</p>
             </div>
             <div>
-              <h3>한 회차에 나올 수 있는 판정</h3>
-              <p>적중 없음(가운데 번호 3개 이하) · 1만(6개 모두 가운데, 직전 회차와 2개 이상 겹침) · 1+2 · 1+3 · 4만 · 5만, 이렇게 여섯 가지뿐입니다.</p>
-              <p>k = 가운데 번호 수, m = 직전 회차 번호 중 가운데 번호 수, C(n, r) = n개 중 r개를 고르는 조합 수입니다. 후보가 많을수록 우연히도 자주 적중합니다.</p>
+              <h3>어느 가설에도 들지 않는 회차</h3>
+              <p>당첨 번호에 적은 양끝 번호가 하나라도 있거나, 직전 회차 번호가 3개 이상이거나, 많은 양끝 번호가 3개 이상이거나, 가운데 번호가 2개 이하이면 적중 없음입니다.</p>
+              <p>a = 직전 회차를 뺀 가운데 번호 수, b = 직전 회차를 뺀 많은 양끝 번호 수, C(n, r) = n개 중 r개를 고르는 조합 수입니다. 직전 회차 번호 6개 중 1개는 6가지, 2개는 C(6, 2) = 15가지입니다. 후보가 많을수록 우연히도 자주 적중합니다.</p>
             </div>
           </div>
 
@@ -455,7 +492,7 @@ export default function Analysis() {
                   <thead>
                     <tr>
                       <th>회차</th><th>번호</th><th className="r">가운데 수</th>
-                      {[1, 2, 3, 4, 5].map((c) => <th key={c} title={CASES[c - 1]}>케이스 {c}</th>)}
+                      {CASES.map((t, i) => <th key={i} title={t}>케이스 {i + 1}</th>)}
                       <th className="r" title="당첨 번호 6개 중 바로 직전 회차 당첨 번호 6개와 겹치는 개수 (보너스 제외)">직전 회차 번호</th>
                     </tr>
                   </thead>
@@ -491,7 +528,7 @@ export default function Analysis() {
                         </tr>
                         {open === a.round && a.prizes && (
                           <tr className="prize-detail">
-                            <td colSpan={9}>
+                            <td colSpan={4 + CASES.length}>
                               <table className="prize-table">
                                 <thead>
                                   <tr><th>{a.round}회 케이스</th><th>후보 조합</th>{RANKS.map((r) => <th key={r}>{r}</th>)}<th>5등 이상</th><th>5등 이상 확률</th></tr>

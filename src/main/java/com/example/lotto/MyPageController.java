@@ -24,7 +24,7 @@ public class MyPageController {
 
     public record MemoRequest(String memo) {}
 
-    /** 다음 회차 번호 생성. caseNo: 0 무작위, 1~5 가설, exclude: 뺄 번호 (예: exclude=7,12) */
+    /** 다음 회차 번호 생성. caseNo: 0 무작위, 1~9 가설, exclude: 뺄 번호 (예: exclude=7,12) */
     @GetMapping("/generate")
     public Map<String, Object> generate(@RequestParam(defaultValue = "1") int caseNo,
                                         @RequestParam(defaultValue = "5") int count,

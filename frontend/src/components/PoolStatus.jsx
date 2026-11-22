@@ -71,8 +71,8 @@ export default function PoolStatus() {
           ))}
         </div>
         <p className="note">
-          가설별 조합 수는 지금까지의 당첨 번호로 계산한 가운데 번호(신뢰구간 60%{pool ? `, ${pool.centerSize}개` : ''})와 직전 회차 번호 기준입니다.
-          한 번호가 여러 가설 조건을 동시에 만족하면 각 가설에서 모두 소진으로 셉니다. 30초마다 새로 고칩니다.
+          가설별 조합 수는 지금까지의 당첨 번호로 계산한 가운데 번호(신뢰구간 60%{pool ? `, ${pool.centerSize}개` : ''})·많은 양끝 번호{pool?.highSize != null ? `(${pool.highSize}개)` : ''}와 직전 회차 번호 기준입니다.
+          가설 1~9는 서로 겹치지 않아 한 조합은 많아야 한 가설에서만 소진됩니다. 30초마다 새로 고칩니다.
         </p>
       </div>
     </section>

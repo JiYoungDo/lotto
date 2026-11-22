@@ -136,10 +136,11 @@ public class ApiController {
             m.put("numbers", a.numbers());
             m.put("bonus", a.bonus());   // 없으면 null
             m.put("center", a.center().stream().sorted().toList());
+            m.put("high", a.high().stream().sorted().toList());   // 많은 쪽 양끝 번호
             List<Integer> prev = byRound.get(a.round() - 1);   // 직전 회차 번호 (없으면 null)
             m.put("prevRepeat", prev == null ? null : a.numbers().stream().filter(prev::contains).toList());   // 직전 회차에도 나온 번호
-            m.put("hits", IntStream.rangeClosed(1, 5).mapToObj(a::hit).toList());
-            m.put("candidates", Arrays.stream(a.candidates()).boxed().toList());   // 케이스 1~5 후보 조합 수
+            m.put("hits", IntStream.rangeClosed(1, AnalysisService.CASES).mapToObj(a::hit).toList());
+            m.put("candidates", Arrays.stream(a.candidates()).boxed().toList());   // 케이스 1~9 후보 조합 수
             m.put("prizes", Arrays.stream(a.prizes())                              // [케이스][1~5등] 조합 수
                     .map(r -> Arrays.stream(r).boxed().toList()).toList());
             return m;

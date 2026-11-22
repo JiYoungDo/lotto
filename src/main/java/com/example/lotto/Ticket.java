@@ -25,7 +25,7 @@ public class Ticket {
 
     private int n1, n2, n3, n4, n5, n6;      // 오름차순
 
-    private Integer caseNo;                 // 생성에 쓴 가설 (1~5), 0 = 무작위, null = 직접 입력
+    private Integer caseNo;                 // 생성에 쓴 가설 (1~9), 0 = 무작위, null = 직접 입력
 
     private Double conf;                    // 생성 당시 신뢰구간
 

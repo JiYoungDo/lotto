@@ -41,18 +41,18 @@ public class TicketService {
     }
 
     /**
-     * 소진된 조합 수: [전체, 케이스1..5] (지금 가운데 번호 기준으로 각 조건을 만족하는 저장 조합 수)
+     * 소진된 조합 수: [전체, 케이스1..9] (지금 가운데 번호 기준으로 각 조건을 만족하는 저장 조합 수)
      * 제외 조합과, 사용자가 뺀 번호가 든 조합은 후보에 없으니 소진에서도 뺀다.
      */
-    private long[] usedCounts(Collection<List<Integer>> taken, List<Integer> center, List<Integer> prev,
-                              Set<Long> excluded, Collection<Integer> removed) {
-        long[] used = new long[6];
+    private long[] usedCounts(Collection<List<Integer>> taken, List<Integer> center, List<Integer> high,
+                              List<Integer> prev, Set<Long> excluded, Collection<Integer> removed) {
+        long[] used = new long[AnalysisService.CASES + 1];
         for (List<Integer> nums : taken) {
             if (AnalysisService.isExcluded(nums, excluded)) continue;
             if (nums.stream().anyMatch(removed::contains)) continue;
             used[0]++;
-            boolean[] h = AnalysisService.caseHits(nums, center, prev);
-            for (int c = 0; c < 5; c++) if (h[c]) used[c + 1]++;
+            int c = AnalysisService.caseOf(nums, center, high, prev);
+            if (c > 0) used[c]++;
         }
         return used;
     }
@@ -68,18 +68,20 @@ public class TicketService {
         for (Ticket t : saved) taken.add(t.numbers());
 
         List<Integer> center = next == null ? List.of() : next.center();
+        List<Integer> high = next == null ? List.of() : next.high();
         List<Integer> prev = next == null ? List.of() : next.prevNumbers();
         Set<Long> excluded = AnalysisService.excludedMasks(all);
-        long[] totals = AnalysisService.candidatesAvoiding(center, prev, Set.of(), excluded);
-        long[] used = usedCounts(taken, center, prev, excluded, Set.of());
+        long[] totals = AnalysisService.candidatesAvoiding(center, high, prev, Set.of(), excluded);
+        long[] used = usedCounts(taken, center, high, prev, excluded, Set.of());
 
         List<Map<String, Object>> cases = new ArrayList<>();
         cases.add(poolRow(0, totals[0], used[0]));
-        for (int c = 1; c <= 5; c++) cases.add(poolRow(c, next == null ? 0 : totals[c], used[c]));
+        for (int c = 1; c <= AnalysisService.CASES; c++) cases.add(poolRow(c, next == null ? 0 : totals[c], used[c]));
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("round", round);
         out.put("conf", conf);
         out.put("centerSize", center.size());
+        out.put("highSize", high.size());
         out.put("savedTickets", saved.size());
         out.put("savers", saved.stream().map(Ticket::getMemberId).distinct().count());
         out.put("cases", cases);
@@ -97,7 +99,7 @@ public class TicketService {
     // ---------- 번호 생성 ----------
 
     /** 번호를 만들 조건: 가설·신뢰구간·사용자가 뺀 번호로 정한 번호판과 후보 수 */
-    private record Setup(int round, int caseNo, double conf, List<Integer> center, List<Integer> prev,
+    private record Setup(int round, int caseNo, double conf, List<Integer> center, List<Integer> high, List<Integer> prev,
                          List<Integer> usable, List<Integer> removed, long candidates, long used,
                          Set<Long> excluded, Set<List<Integer>> taken) {
         long remaining() { return Math.max(0, candidates - used); }
@@ -112,22 +114,27 @@ public class TicketService {
             out.put("remaining", remaining());
             out.put("probability", candidates / 8_145_060.0);   // 무작위로 나온 당첨 번호가 이 가설에 들어갈 확률
             out.put("center", center);
+            out.put("high", high);         // 많은 쪽 양끝 번호
             out.put("prevNumbers", prev);
+            out.put("shape", caseNo == 0 ? null : AnalysisService.SHAPES[caseNo - 1]);   // {직전, 가운데, 많은 양끝} 개수
             out.put("usable", usable);     // 이 가설의 조합에 들어갈 수 있는 번호 (뺀 번호 포함)
             out.put("removed", removed);   // 사용자가 뺀 번호
             return out;
         }
     }
 
-    /** 가설별로 조합에 들어갈 수 있는 번호: 0·4·5 전체, 1·3 가운데 번호, 2 직전 회차에 없던 가운데 번호 */
-    private static List<Integer> usableNumbers(int caseNo, List<Integer> center, List<Integer> prev) {
+    /**
+     * 가설별로 조합에 들어갈 수 있는 번호: 0은 전체,
+     * 1~9는 그 가설이 쓰는 묶음(직전 회차 번호 / 직전 회차를 뺀 가운데 번호 / 직전 회차를 뺀 많은 양끝 번호)의 번호
+     */
+    private static List<Integer> usableNumbers(int caseNo, List<Integer> center, List<Integer> high, List<Integer> prev) {
         List<Integer> out = new ArrayList<>();
+        int[] shape = caseNo == 0 ? null : AnalysisService.SHAPES[caseNo - 1];
         for (int n = 1; n <= 45; n++) {
-            boolean ok = switch (caseNo) {
-                case 1, 3 -> center.contains(n);
-                case 2 -> center.contains(n) && !prev.contains(n);
-                default -> true;
-            };
+            boolean ok = shape == null
+                    || (prev.contains(n) ? shape[0] > 0
+                    : center.contains(n) ? shape[1] > 0
+                    : high.contains(n) && shape[2] > 0);
             if (ok) out.add(n);
         }
         return out;
@@ -135,7 +142,9 @@ public class TicketService {
 
     private Setup setup(int caseNo, double conf, Collection<Integer> removedIn) {
         if (conf < 1 || conf > 99) throw new IllegalArgumentException("신뢰구간은 1~99 사이입니다.");
-        if (caseNo < 0 || caseNo > 5) throw new IllegalArgumentException("가설은 0(무작위) 또는 1~5 입니다.");
+        if (caseNo < 0 || caseNo > AnalysisService.CASES) {
+            throw new IllegalArgumentException("가설은 0(무작위) 또는 1~" + AnalysisService.CASES + " 입니다.");
+        }
         Set<Integer> removed = new TreeSet<>(removedIn == null ? List.of() : removedIn);
         if (removed.stream().anyMatch(n -> n == null || n < 1 || n > 45)) throw new IllegalArgumentException("뺄 번호는 1~45 사이여야 합니다.");
 
@@ -144,15 +153,16 @@ public class TicketService {
         if (next == null && caseNo != 0) throw new IllegalArgumentException("회차 데이터가 없어 가설로 만들 수 없습니다.");
 
         List<Integer> center = next == null ? List.of() : next.center();
+        List<Integer> high = next == null ? List.of() : next.high();
         List<Integer> prev = next == null ? List.of() : next.prevNumbers();
         Set<Long> excluded = AnalysisService.excludedMasks(all);   // 과거 당첨 조합 + 모양 조합
-        long candidates = AnalysisService.candidatesAvoiding(center, prev, removed, excluded)[caseNo];
+        long candidates = AnalysisService.candidatesAvoiding(center, high, prev, removed, excluded)[caseNo];
 
         // 이미 다른 회원(또는 내)가 저장한 조합은 소진된 것으로 본다
         int round = nextRound(all);
         Set<List<Integer>> taken = takenSets(round);
-        long used = usedCounts(taken, center, prev, excluded, removed)[caseNo];
-        return new Setup(round, caseNo, conf, center, prev, usableNumbers(caseNo, center, prev),
+        long used = usedCounts(taken, center, high, prev, excluded, removed)[caseNo];
+        return new Setup(round, caseNo, conf, center, high, prev, usableNumbers(caseNo, center, high, prev),
                 new ArrayList<>(removed), candidates, used, excluded, taken);
     }
 
@@ -179,7 +189,7 @@ public class TicketService {
         Set<List<Integer>> sets = new LinkedHashSet<>();
         int target = (int) Math.min(count, s.remaining());
         for (int tries = 0; sets.size() < target && tries < 5000; tries++) {
-            List<Integer> nums = NumberGenerator.generate(caseNo, s.center(), s.prev(), s.removed(), RANDOM);
+            List<Integer> nums = NumberGenerator.generate(caseNo, s.center(), s.high(), s.prev(), s.removed(), RANDOM);
             if (!s.taken().contains(nums) && !AnalysisService.isExcluded(nums, s.excluded())) sets.add(nums);
         }
         Map<String, Object> out = s.toMap();
@@ -198,7 +208,7 @@ public class TicketService {
         if (req.sets() == null || req.sets().isEmpty()) throw new IllegalArgumentException("저장할 번호를 고르세요.");
         if (req.sets().size() > 10) throw new IllegalArgumentException("한 번에 10줄까지 저장할 수 있습니다.");
         Integer caseNo = req.caseNo();
-        if (caseNo != null && (caseNo < 0 || caseNo > 5)) throw new IllegalArgumentException("가설 번호가 올바르지 않습니다.");
+        if (caseNo != null && (caseNo < 0 || caseNo > AnalysisService.CASES)) throw new IllegalArgumentException("가설 번호가 올바르지 않습니다.");
         String memo = req.memo() == null ? null : req.memo().strip();
         if (memo != null && memo.length() > 50) throw new IllegalArgumentException("메모는 50자까지 쓸 수 있습니다.");
         if (memo != null && memo.isEmpty()) memo = null;

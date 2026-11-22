@@ -13,7 +13,7 @@ import NotifyToggle from '../components/NotifyToggle.jsx'
 import { useNotify } from '../notify.js'
 import Disclaimer from '../components/Disclaimer.jsx'
 
-// 가설 선택 카드: 0 = 무작위, 1~5 = 가설
+// 가설 선택 카드: 0 = 무작위, 1~9 = 가설
 const PICKS = [
   { caseNo: 0, title: '무작위', desc: '조건 없이 1~45에서 6개', pips: ['', '', '', '', '', ''] },
   ...CASE_GUIDE.map((g, i) => ({ caseNo: i + 1, title: g.title, desc: g.desc, pips: g.pips })),
@@ -21,18 +21,27 @@ const PICKS = [
 const pct = (v) => `${(v * 100).toFixed(2)}%`
 const ALL_NUMBERS = Array.from({ length: 45 }, (_, i) => i + 1)
 
-// 가설별로 번호판 위에 표시할 번호 종류
+// 가설별로 번호판 위에 표시할 번호 종류 (직전 회차 번호가 가장 먼저: 가운데든 양끝이든 직전 회차 묶음)
 function numberKind(n, opt) {
   if (!opt.usable.includes(n)) return 'unused'
   if (opt.caseNo === 0) return 'any'
-  return opt.center.includes(n) ? 'center' : 'edge'
+  if (opt.prevNumbers.includes(n)) return 'prev'
+  return opt.center.includes(n) ? 'center' : 'high'
 }
-const KIND_LABEL = { center: '가운데 번호', edge: '양끝 번호', any: '번호', unused: '이 가설에서는 쓰지 않는 번호' }
+const KIND_LABEL = {
+  prev: '직전 회차 번호', center: '가운데 번호', high: '많은 양끝 번호', any: '번호', unused: '이 가설에서는 쓰지 않는 번호',
+}
 
 // 번호판: 이 가설의 조합에 들어갈 수 있는 번호를 보여 주고, 누르면 빼거나 되돌림
 function NumberBoard({ opt, removed, onToggle, onReset }) {
   const usable = opt.usable.filter((n) => !removed.includes(n))
-  const prevCenter = opt.caseNo === 3 ? opt.prevNumbers.filter((n) => opt.center.includes(n) && !removed.includes(n)) : []
+  const [needPrev, needCenter, needHigh] = opt.shape ?? [0, 0, 0]
+  const left = (kind) => usable.filter((n) => numberKind(n, opt) === kind).length
+  const need = [
+    needPrev > 0 && `직전 회차 번호 ${left('prev')}개 중 ${needPrev}개`,
+    needCenter > 0 && `가운데 번호 ${left('center')}개 중 ${needCenter}개`,
+    needHigh > 0 && `많은 양끝 번호 ${left('high')}개 중 ${needHigh}개`,
+  ].filter(Boolean)
   return (
     <div className="num-board">
       <div className="num-board-head">
@@ -52,7 +61,7 @@ function NumberBoard({ opt, removed, onToggle, onReset }) {
           return (
             <button key={n} type="button" disabled={kind === 'unused'} aria-pressed={!off}
                     className={`ball r${ballRange(n)} board-ball ${kind}` + (off ? ' removed' : '') + (prev && kind !== 'unused' ? ' prev' : '')}
-                    title={`${n}번 · ${KIND_LABEL[kind]}${prev ? ' · 직전 회차 번호' : ''}${kind === 'unused' ? '' : off ? ' · 눌러서 되돌리기' : ' · 눌러서 빼기'}`}
+                    title={`${n}번 · ${KIND_LABEL[kind]}${prev && kind === 'any' ? ' · 직전 회차 번호' : ''}${kind === 'unused' ? '' : off ? ' · 눌러서 되돌리기' : ' · 눌러서 빼기'}`}
                     onClick={() => onToggle(n)}>
               {n}
             </button>
@@ -60,16 +69,16 @@ function NumberBoard({ opt, removed, onToggle, onReset }) {
         })}
       </div>
       <div className="case-legend board-legend" aria-hidden="true">
-        {opt.caseNo !== 0 && <span><i className="board-key center" />가운데 번호</span>}
-        {(opt.caseNo === 4 || opt.caseNo === 5) && <span><i className="board-key edge" />양끝 번호</span>}
-        <span><i className="board-key prev" />직전 회차 번호</span>
+        {needCenter > 0 && <span><i className="board-key center" />가운데 번호</span>}
+        {needHigh > 0 && <span><i className="board-key high" />많은 양끝 번호</span>}
+        {(opt.caseNo === 0 || needPrev > 0) && <span><i className="board-key prev" />직전 회차 번호</span>}
         <span><i className="board-key removed" />뺀 번호</span>
-        {opt.caseNo !== 0 && opt.caseNo < 4 && <span><i className="board-key unused" />이 가설에서 쓰지 않는 번호</span>}
+        {opt.caseNo !== 0 && <span><i className="board-key unused" />이 가설에서 쓰지 않는 번호</span>}
       </div>
       <p className="caption board-summary">
         {removed.length > 0 && <>뺀 번호 <b className="num">{removed.join(', ')}</b> · </>}
         후보 {opt.candidates.toLocaleString()}개 조합 중 <b>{opt.remaining.toLocaleString()}개 남음</b>
-        {opt.caseNo === 3 && ` · 직전 회차 가운데 번호 ${prevCenter.length}개 중 1개를 꼭 씁니다`}
+        {need.length > 0 && ` · ${need.join(', ')}를 씁니다`}
       </p>
     </div>
   )
@@ -314,6 +323,11 @@ function Generator({ nextRound, onSaved }) {
               <span className="pick-desc">{p.desc}</span>
             </button>
           ))}
+        </div>
+        <div className="case-legend" aria-hidden="true">
+          <span><i className="pip p" />직전 회차 번호</span>
+          <span><i className="pip c" />가운데 번호 (직전 회차 제외)</span>
+          <span><i className="pip h" />많은 양끝 번호 (직전 회차 제외)</span>
         </div>
 
         <div className="feature-card" style={{ marginTop: 24 }}>

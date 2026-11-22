@@ -78,7 +78,8 @@ class MyPageTest {
     @Test
     void 번호판에서_뺀_번호는_만든_번호에_나오지_않는다() throws Exception {
         var next = analysis.outlook(draws.findAllByOrderByRoundAsc(), 60);
-        List<Integer> center = next.center();
+        // 케이스 1은 직전 회차를 뺀 가운데 번호만 쓴다
+        List<Integer> center = next.center().stream().filter(n -> !next.prevNumbers().contains(n)).toList();
         String ex = center.get(0) + "," + center.get(1);
 
         String body = mvc.perform(get("/api/my/generate").param("caseNo", "1").param("count", "10")
@@ -175,8 +176,8 @@ class MyPageTest {
     @Test
     void 조합_현황은_누구나_보고_저장하면_소진된다() throws Exception {
         var next = analysis.outlook(draws.findAllByOrderByRoundAsc(), 60);
-        // 케이스 1 조건(6개 모두 가운데)을 만족하는 조합 하나
-        List<Integer> c1 = NumberGenerator.generate(1, next.center(), next.prevNumbers(), new Random(3));
+        // 케이스 1 조건(직전 회차를 뺀 가운데 번호 6개)을 만족하는 조합 하나
+        List<Integer> c1 = NumberGenerator.generate(1, next.center(), next.high(), next.prevNumbers(), new Random(3));
         long total1 = next.candidates()[0];                   // 제외 조합(과거 당첨·모양 조합)을 뺀 후보 수
         long random = 8145060L - next.excluded();
 
@@ -194,7 +195,7 @@ class MyPageTest {
                 .andExpect(jsonPath("$.cases[0].remaining").value(random - 1))
                 .andExpect(jsonPath("$.cases[1].used").value(1))
                 .andExpect(jsonPath("$.cases[1].remaining").value(total1 - 1))
-                .andExpect(jsonPath("$.cases[4].used").value(0));   // 케이스 4(가운데 4개)에는 해당 없음
+                .andExpect(jsonPath("$.cases[4].used").value(0));   // 케이스 4(가운데 4 + 많은 양끝 2)에는 해당 없음
 
         // 번호 만들기에도 남은 수가 반영되고, 저장된 조합은 나오지 않는다
         mvc.perform(get("/api/my/generate").param("caseNo", "1").param("count", "10").with(user("other").roles("USER")))
