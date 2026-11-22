@@ -176,6 +176,31 @@ public class AnalysisService {
                 new ExclusionRule("arithmetic", apCombos, ap, n * apCombos / TOTAL));
     }
 
+    /**
+     * 직전 회차 번호가 바로 다음 회차에 다시 나온 정도 (보너스 번호 제외, 당첨 번호 6개끼리 비교).
+     * pairs = 비교한 연속 회차 쌍 수 (회차 수 − 1)
+     * actual[k] = 직전 회차 번호가 정확히 k개(0~6) 다시 나온 회차 수
+     * expected[k] = 무작위일 때 기대 회차 수 = pairs × C(6,k)·C(39,6−k) / C(45,6)
+     * atLeastOne / expectedAtLeastOne = 1개 이상 다시 나온 회차 수와 그 기대값
+     * repeatedNumbers = 다시 나온 번호 개수의 합
+     */
+    public record RepeatStat(int pairs, long[] actual, double[] expected,
+                             long atLeastOne, double expectedAtLeastOne, long repeatedNumbers) {}
+
+    public RepeatStat repeatSummary(List<Draw> draws) {
+        int pairs = Math.max(0, draws.size() - 1);
+        long[] actual = new long[7];
+        long repeated = 0;
+        for (int i = 1; i < draws.size(); i++) {
+            int k = Long.bitCount(mask(draws.get(i).numbers()) & mask(draws.get(i - 1).numbers()));
+            actual[k]++;
+            repeated += k;
+        }
+        double[] expected = new double[7];
+        for (int k = 0; k <= 6; k++) expected[k] = pairs * comb(6, k) * comb(39, 6 - k) / TOTAL;
+        return new RepeatStat(pairs, actual, expected, pairs - actual[0], pairs - expected[0], repeated);
+    }
+
     /** 5개 이상 연속이거나 등차수열인 조합인지 (예: 7 8 9 10 11 30, 3 10 17 24 31 38) */
     public static boolean isPattern(Collection<Integer> nums) {
         return nums.size() == 6 && PATTERN_MASKS.contains(mask(nums));

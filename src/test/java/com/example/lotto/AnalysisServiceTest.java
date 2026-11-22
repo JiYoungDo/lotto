@@ -232,6 +232,26 @@ class AnalysisServiceTest {
         assertEquals(1, rules.get(2).actual());
     }
 
+    @Test
+    void 직전_회차_번호_반복_집계() {
+        var draws = List.of(
+                new Draw(1, 1, 2, 3, 4, 5, 6),
+                new Draw(2, 1, 2, 10, 11, 12, 13),     // 직전과 2개 겹침
+                new Draw(3, 20, 21, 22, 23, 24, 25),   // 0개
+                new Draw(4, 25, 30, 31, 32, 33, 34));  // 1개
+        var r = service.repeatSummary(draws);
+        assertEquals(3, r.pairs());
+        assertEquals(1, r.actual()[0]);
+        assertEquals(1, r.actual()[1]);
+        assertEquals(1, r.actual()[2]);
+        assertEquals(2, r.atLeastOne());
+        assertEquals(3, r.repeatedNumbers());
+        double sum = 0;
+        for (double e : r.expected()) sum += e;
+        assertEquals(3.0, sum, 1e-9);
+        assertEquals(3 * (1 - 3_262_623 / 8_145_060.0), r.expectedAtLeastOne(), 1e-9);
+    }
+
     private List<Draw> randomDraws(int count) {
         return randomDraws(count, false);
     }

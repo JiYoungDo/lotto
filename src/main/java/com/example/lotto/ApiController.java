@@ -146,6 +146,7 @@ public class ApiController {
                 "stats", analysis.summarize(rows), "rows", rowDtos));
         result.put("next", analysis.outlook(draws, conf));   // 데이터가 없으면 null
         result.put("exclusions", analysis.exclusionSummary(draws));   // 제외 규칙별 조합 수·실제·기대 횟수
+        result.put("repeat", analysis.repeatSummary(draws));   // 직전 회차 번호가 다음 회차에 다시 나온 개수 분포
         result.put("missingBonus", draws.stream().filter(d -> d.getBonus() == null).count());   // 보너스 번호가 없는 회차 수
         return result;
     }

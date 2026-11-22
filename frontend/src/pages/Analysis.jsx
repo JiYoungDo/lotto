@@ -202,6 +202,49 @@ export default function Analysis() {
             </div>
           </div>
           <p className="note">{CASES.map((c, i) => `케이스 ${i + 1}: ${c}`).join(' · ')}</p>
+
+          {data?.repeat && data.repeat.pairs > 0 && (
+            <div className="exclude-block">
+              <div className="section-head">
+                <h3 className="display-xs">직전 회차 번호가 다음 회차에 다시 나온 횟수</h3>
+                <p>바로 앞 회차 당첨 번호 6개 중 몇 개가 다음 회차 당첨 번호 6개에 다시 들어 있었는지 셉니다 (보너스 번호 제외, 신뢰구간·최소 회차와 상관없이 전체 회차 기준). 케이스 2·3이 기대는 ‘직전 회차 번호’가 실제로 얼마나 자주 돌아오는지 확인하는 표입니다.</p>
+              </div>
+              <div className="feature-card">
+                <p className="title-md" style={{ marginTop: 0 }}>
+                  {data.repeat.pairs.toLocaleString()}번 중 <b>{data.repeat.atLeastOne.toLocaleString()}번</b>({pct((data.repeat.atLeastOne / data.repeat.pairs) * 100)})은 직전 회차 번호가 1개 이상 다시 나왔습니다
+                </p>
+                <p className="case-now">무작위 기대 {data.repeat.expectedAtLeastOne.toFixed(1)}번 ({pct((data.repeat.expectedAtLeastOne / data.repeat.pairs) * 100)}) · 다시 나온 번호 합계 {data.repeat.repeatedNumbers.toLocaleString()}개 (회차당 평균 {(data.repeat.repeatedNumbers / data.repeat.pairs).toFixed(2)}개, 기대 0.80개)</p>
+                <div className="table-wrap">
+                  <table className="list-table">
+                    <thead>
+                      <tr>
+                        <th>다시 나온 개수</th><th className="r">실제 회차 수</th><th className="r">실제 비율</th>
+                        <th className="r">무작위 기대 회차 수</th><th className="r">기대 비율</th><th className="r">차이</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.repeat.actual.map((a, k) => {
+                        const e = data.repeat.expected[k]
+                        const diff = a - e
+                        return (
+                          <tr key={k}>
+                            <td className="title-md">{k}개</td>
+                            <td className="r num">{a.toLocaleString()}</td>
+                            <td className="r num">{pct((a / data.repeat.pairs) * 100)}</td>
+                            <td className="r num muted">{e.toFixed(1)}</td>
+                            <td className="r num muted">{fmtRate((e / data.repeat.pairs) * 100)}</td>
+                            <td className={'r num ' + (diff > 0.05 ? 'up' : diff < -0.05 ? 'down' : 'muted')}>
+                              {diff > 0 ? '+' : ''}{diff.toFixed(1)}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
