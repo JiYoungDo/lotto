@@ -11,6 +11,7 @@ import MyPage from './pages/MyPage.jsx'
 import { Privacy, Terms } from './pages/Legal.jsx'
 import { GuideIndex, GuideArticle } from './pages/Guide.jsx'
 import DrawDetail from './pages/DrawDetail.jsx'
+import Try from './pages/Try.jsx'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/draws" element={<Draws />} />
         <Route path="/draw/:round" element={<DrawDetail />} />
         <Route path="/analysis" element={<Analysis />} />
+        <Route path="/try" element={<Try />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />

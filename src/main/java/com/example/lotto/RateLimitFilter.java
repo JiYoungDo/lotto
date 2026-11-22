@@ -21,6 +21,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final String LOGIN = "/api/auth/login";
     private static final String SIGNUP = "/api/auth/signup";
+    private static final String TRY_PREFIX = "/api/try/";   // 가입 없이 번호 만들어 보기 (GET)
 
     private static final long MIN = 60_000L;
 
@@ -29,6 +30,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final Rule LOGIN_USER = new Rule(10, 10 * MIN);
     // 회원가입: IP당 1시간에 5번
     private static final Rule SIGNUP_IP = new Rule(5, 60 * MIN);
+    // 가입 없이 번호 만들어 보기: 계산이 무거워서 IP당 5분에 120번 (번호판에서 번호를 누를 때마다 미리보기를 다시 계산함)
+    private static final Rule TRY_IP = new Rule(120, 5 * MIN);
 
     private static final int CLEANUP_SIZE = 5_000;
 
@@ -36,8 +39,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        if (!"POST".equals(request.getMethod())) return true;
         String path = request.getRequestURI();
+        if ("GET".equals(request.getMethod())) return !path.startsWith(TRY_PREFIX);
+        if (!"POST".equals(request.getMethod())) return true;
         return !(LOGIN.equals(path) || SIGNUP.equals(path));
     }
 
@@ -48,7 +52,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
         long now = System.currentTimeMillis();
         long retryAfterMs = 0;
 
-        if (LOGIN.equals(request.getRequestURI())) {
+        if (request.getRequestURI().startsWith(TRY_PREFIX)) {
+            retryAfterMs = hit("try-ip:" + ip, TRY_IP, now);
+        } else if (LOGIN.equals(request.getRequestURI())) {
             retryAfterMs = Math.max(retryAfterMs, hit("login-ip:" + ip, LOGIN_IP, now));
             String username = request.getParameter("username");
             if (username != null && !username.isBlank()) {

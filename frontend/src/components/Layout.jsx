@@ -46,6 +46,7 @@ export default function Layout() {
           <nav className="nav-links">
             <NavLink to="/draws" className={cls}>회차 번호</NavLink>
             <NavLink to="/analysis" className={cls}>가설 분석</NavLink>
+            {!me?.loggedIn && <NavLink to="/try" className={cls}>번호 체험</NavLink>}
             <NavLink to="/community" className={cls}>커뮤니티</NavLink>
             <NavLink to="/guide" className={cls}>가이드</NavLink>
             {me?.loggedIn && <NavLink to="/mypage" className={cls}>마이페이지</NavLink>}

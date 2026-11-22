@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchDraws } from '../api.js'
+import { useAuth } from '../auth.js'
 import PoolStatus from '../components/PoolStatus.jsx'
 import BallRunner from '../components/BallRunner.jsx'
 import CatchGame from '../components/CatchGame.jsx'
@@ -11,6 +12,7 @@ import { formatDrawDate, pad2, useCountdown } from '../drawDate.js'
 
 // 회차 번호 화면: 최신 당첨 번호 + 다음 회차 남은 조합 현황
 export default function Draws() {
+  const { me } = useAuth()
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [tick, setTick] = useState(0)
@@ -37,8 +39,10 @@ export default function Draws() {
             <h1 className="display-mega">이번 회차<br />번호 현황</h1>
             <p className="lead">최신 당첨 번호와, 다음 회차에서 가설별로 아직 남아 있는 조합을 확인하세요. 쌓인 데이터로 가설이 맞았는지는 가설 분석에서 볼 수 있습니다.</p>
             <div className="hero-actions">
-              <Link className="btn btn-primary btn-lg" to="/analysis">가설 분석 보기</Link>
-              <a className="btn btn-outline-dark btn-lg" href="#pool">남은 조합 보기</a>
+              {me?.loggedIn
+                ? <Link className="btn btn-primary btn-lg" to="/mypage#make">내 번호 만들기</Link>
+                : <Link className="btn btn-primary btn-lg" to="/try">가입 없이 번호 만들어 보기</Link>}
+              <Link className="btn btn-outline-dark btn-lg" to="/analysis">가설 분석 보기</Link>
             </div>
             {error && <p className="notice">서버에 연결하지 못했어요: {error}</p>}
           </div>

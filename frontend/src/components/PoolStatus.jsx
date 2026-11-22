@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchPool } from '../api.js'
+import { fetchPool, fetchAnalysis } from '../api.js'
 import { useAuth } from '../auth.js'
 import { CASE_GUIDE } from '../hypotheses.js'
 import { useDrawEvents } from '../drawEvents.js'
 
 const REFRESH_MS = 30_000
+// 저장한 회원이 이 수보다 적으면 "0명·0줄" 같은 숫자 대신 가설 검증 기록을 앞에 보여 준다
+const MIN_SAVERS = 10
+const pct1 = (v) => `${Number(v).toFixed(1)}%`
 
 // 다음 회차 조합 현황: 가설별 전체 조합 중 회원들이 저장해 소진된 수와 남은 수
 export default function PoolStatus() {
   const { me } = useAuth()
   const [pool, setPool] = useState(null)
+  const [stats, setStats] = useState(null) // 가설별 적중 기록 (가설 분석과 같은 값)
   const [error, setError] = useState(null)
   const [tick, setTick] = useState(0)
 
@@ -27,8 +31,17 @@ export default function PoolStatus() {
     return () => { alive = false; clearInterval(t) }
   }, [tick])
 
+  // 가설별 적중 기록은 한 번만 불러온다 (회차가 새로 등록되면 다시)
+  useEffect(() => {
+    let alive = true
+    fetchAnalysis(60, 30).then((d) => { if (alive) setStats(d.stats) }).catch(() => {})
+    return () => { alive = false }
+  }, [tick])
+
   if (error) return null
   const all = pool?.cases[0]
+  const fewSavers = pool != null && pool.savers < MIN_SAVERS
+  const statOf = (caseNo) => stats?.find((s) => s.caseNo === caseNo)
 
   return (
     <section className="section" id="pool">
@@ -48,11 +61,21 @@ export default function PoolStatus() {
             <div className="caption">{all ? `${all.total.toLocaleString()}개 중 ${all.used.toLocaleString()}개 소진` : ''}</div>
           </div>
           <div className="pool-side">
-            <div><span className="caption">저장한 회원</span><b className="num">{pool ? pool.savers.toLocaleString() : '-'}명</b></div>
-            <div><span className="caption">저장된 번호</span><b className="num">{pool ? pool.savedTickets.toLocaleString() : '-'}줄</b></div>
+            {fewSavers ? (
+              <div>
+                <span className="caption">가설 1~9는 지금까지의 당첨 번호로 미리 검증했어요</span>
+                <b className="num">{statOf(1) ? `${statOf(1).total.toLocaleString()}회 기준` : '검증 기록 불러오는 중'}</b>
+                <Link className="caption" to="/analysis" style={{ textDecoration: 'underline' }}>가설별 적중 기록 보기</Link>
+              </div>
+            ) : (
+              <>
+                <div><span className="caption">저장한 회원</span><b className="num">{pool ? pool.savers.toLocaleString() : '-'}명</b></div>
+                <div><span className="caption">저장된 번호</span><b className="num">{pool ? pool.savedTickets.toLocaleString() : '-'}줄</b></div>
+              </>
+            )}
             {me?.loggedIn
               ? <Link className="btn btn-primary btn-sm" to="/mypage#make">내 번호 만들기</Link>
-              : <Link className="btn btn-primary btn-sm" to="/login">로그인하고 번호 만들기</Link>}
+              : <Link className="btn btn-primary btn-sm" to="/try">가입 없이 번호 만들어 보기</Link>}
           </div>
         </div>
 
@@ -65,8 +88,13 @@ export default function PoolStatus() {
               <div className="caption">남은 조합</div>
               <div className="pool-meta">
                 <span>전체 <b className="num">{c ? c.total.toLocaleString() : '-'}</b></span>
-                <span>소진 <b className="num">{c ? c.used.toLocaleString() : '-'}</b></span>
+                {!fewSavers && <span>소진 <b className="num">{c ? c.used.toLocaleString() : '-'}</b></span>}
               </div>
+              {statOf(i + 1) && (
+                <div className="pool-hit caption">
+                  적중 <b className="num">{statOf(i + 1).hits}/{statOf(i + 1).total}회</b> ({pct1(statOf(i + 1).actualRate)}) · 무작위 기대 {pct1(statOf(i + 1).expectedRate)}
+                </div>
+              )}
             </div>
           ))}
         </div>

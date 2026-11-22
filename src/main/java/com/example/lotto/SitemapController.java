@@ -16,7 +16,7 @@ import java.util.List;
 public class SitemapController {
 
     private static final List<String> PAGES = List.of(
-            "/draws", "/analysis", "/guide",
+            "/draws", "/analysis", "/try", "/guide",
             "/guide/start", "/guide/center-numbers", "/guide/lotto-odds",
             "/guide/test-hypothesis", "/guide/play-responsibly",
             "/community", "/terms", "/privacy");

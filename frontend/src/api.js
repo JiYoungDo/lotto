@@ -85,10 +85,12 @@ export const clearPosts = () => request('/api/admin/community/posts', { method: 
 
 // 마이페이지
 const excludeParam = (removed) => (removed && removed.length ? `&exclude=${removed.join(',')}` : '')
-export const generateNumbers = (caseNo, count, conf, removed) =>
-  request(`/api/my/generate?caseNo=${caseNo}&count=${count}&conf=${conf}${excludeParam(removed)}`)
-export const fetchGenerateOptions = (caseNo, conf, removed) =>
-  request(`/api/my/generate/options?caseNo=${caseNo}&conf=${conf}${excludeParam(removed)}`)
+// guest 이면 가입 없이 쓰는 주소(/api/try, 저장 불가), 아니면 회원용 주소(/api/my)
+const genBase = (guest) => (guest ? '/api/try' : '/api/my')
+export const generateNumbers = (caseNo, count, conf, removed, guest = false) =>
+  request(`${genBase(guest)}/generate?caseNo=${caseNo}&count=${count}&conf=${conf}${excludeParam(removed)}`)
+export const fetchGenerateOptions = (caseNo, conf, removed, guest = false) =>
+  request(`${genBase(guest)}/generate/options?caseNo=${caseNo}&conf=${conf}${excludeParam(removed)}`)
 export const fetchMyTickets = () => request('/api/my/tickets')
 export const fetchMyRewards = () => request('/api/my/rewards')
 export const attendToday = () => request('/api/my/rewards/attend', { method: 'POST' })

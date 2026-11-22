@@ -620,3 +620,8 @@ input[type=file].input { padding: 10px 16px; height: auto; }
 .terms-ver { display: block; font-size: 11px; }
 .terms-ver.old { color: var(--down); }
 .link-btn { padding: 0; border: 0; background: none; font: inherit; color: var(--primary); cursor: pointer; }
+
+/* 가입 없이 번호 만들어 보기: 가입 안내 */
+.try-cta { margin-top: 16px; padding: 16px; border: 1px solid var(--hairline, rgba(0,0,0,.12)); border-radius: 12px; }
+.try-cta p { margin-bottom: 12px; }
+.pool-hit { margin-top: 8px; }

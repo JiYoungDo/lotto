@@ -30,4 +30,15 @@ class RateLimitTest {
         }
         assertEquals(429, last);
     }
+
+    @Test
+    void 번호_체험_조회도_한도를_넘으면_429() throws Exception {
+        int last = 0;
+        for (int i = 0; i < 121; i++) {
+            // 잘못된 가설 번호라 계산은 하지 않고 400이 나오지만, 제한 필터는 횟수를 센다
+            last = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/try/generate?caseNo=99"))
+                    .andReturn().getResponse().getStatus();
+        }
+        assertEquals(429, last);
+    }
 }
