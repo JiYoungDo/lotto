@@ -4,8 +4,8 @@ import { EFFECTIVE } from '../legal.js'
 
 // 이용약관·개인정보 처리방침. 운영자 정보는 여기서, 시행일은 legal.js 에서 바꿉니다.
 const SERVICE = '로또 연구소'
-const OPERATOR = '로또 연구소 운영자'
-const CONTACT = <>마이페이지의 <Link to="/mypage#chat">관리자 1:1 채팅</Link></>
+const OPERATOR = '로또연구소 관리소장'
+const CONTACT = <>이메일 <a href="mailto:lottoyeonguso@gmail.com">lottoyeonguso@gmail.com</a> 또는 마이페이지의 <Link to="/mypage#chat">관리자 1:1 채팅</Link></>
 
 function Doc({ title, lead, children }) {
   return (
@@ -33,7 +33,7 @@ export function Privacy() {
           <tbody>
             <tr><td>회원가입 (필수)</td><td>아이디, 닉네임, 비밀번호(암호화하여 저장), 만 19세 이상 확인 여부와 확인 시각, 이용약관·개인정보 수집·이용 동의 시각과 동의한 약관 버전</td></tr>
             <tr><td>서비스 이용 중 생성</td><td>가입일, 마지막 로그인 시각, 이용 정지 여부, 저장한 번호(회차·번호·사용한 가설·메모), 커뮤니티 글, 관리자와의 1:1 채팅 내용, 미니게임 최고 점수와 플레이 횟수</td></tr>
-            <tr><td>자동 생성</td><td>로그인 상태를 유지하기 위한 세션 쿠키</td></tr>
+            <tr><td>자동 생성</td><td>로그인 상태를 유지하기 위한 세션 쿠키, 로그인·회원가입 시도 횟수를 제한하기 위한 접속 IP 주소(서버 메모리에서 일시적으로 처리)</td></tr>
           </tbody>
         </table>
         <p>모든 정보는 회원이 화면에 직접 입력하거나 서비스를 이용하는 과정에서 만들어집니다.</p>
@@ -56,7 +56,19 @@ export function Privacy() {
         </ul>
 
         <h2>4. 제3자 제공과 처리 위탁</h2>
-        <p>서비스는 개인정보를 제3자에게 제공하지 않으며, 개인정보 처리 업무를 외부에 위탁하지 않습니다. 법령에 따라 수사기관 등이 정당하게 요청하는 경우는 예외로 합니다.</p>
+        <p>서비스는 개인정보를 제3자에게 제공하지 않으며, 아래 ‘서버 위치’에 적은 서버 임대 외에 개인정보 처리 업무를 외부에 위탁하지 않습니다. 법령에 따라 수사기관 등이 정당하게 요청하는 경우는 예외로 합니다.</p>
+        <p><b>서버 위치 (개인정보의 국외 보관)</b></p>
+        <table className="legal-table">
+          <tbody>
+            <tr><td>보관 업체</td><td>Amazon Web Services (Amazon Lightsail)</td></tr>
+            <tr><td>보관 국가·지역</td><td>호주 (시드니)</td></tr>
+            <tr><td>보관 항목</td><td>1항의 개인정보 전체</td></tr>
+            <tr><td>이전 시기·방법</td><td>서비스를 이용하는 때, 암호화된 통신(HTTPS)으로 전송</td></tr>
+            <tr><td>이용 목적</td><td>서비스 제공을 위한 서버 운영과 데이터 보관</td></tr>
+            <tr><td>보유 기간</td><td>3항과 같음 (회원 탈퇴 시 지체 없이 삭제)</td></tr>
+          </tbody>
+        </table>
+        <p>국외 보관을 원하지 않으면 회원 가입을 하지 않거나 탈퇴할 수 있습니다.</p>
         {ADS_ENABLED && (
           <p>다만 서비스에 광고를 게재하기 위해 Google(AdSense)이 이용자의 브라우저에서 쿠키 등으로 방문 정보를 직접 수집할 수 있습니다. 서비스는 회원 정보(아이디, 닉네임, 저장한 번호 등)를 Google에 넘기지 않습니다. 자세한 내용은 7항을 참고하세요.</p>
         )}

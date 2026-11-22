@@ -37,7 +37,7 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
     private static final DateTimeFormatter DT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final SecureRandom RANDOM = new SecureRandom();
     /** 지금 적용 중인 이용약관·개인정보 처리방침의 시행일 (frontend/src/pages/Legal.jsx 의 EFFECTIVE 와 같이 바꿈) */
-    public static final String TERMS_VERSION = "2026-11-18";
+    public static final String TERMS_VERSION = "2026-11-22";
 
     private final MemberRepository repo;
     private final TicketRepository tickets;
