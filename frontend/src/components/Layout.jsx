@@ -8,7 +8,7 @@ import TermsGate from './TermsGate.jsx'
 // 푸터 위 광고를 보여 줄 화면 (게임이 있는 회차 번호, 로그인·가입·마이페이지·관리자 같은 입력 화면은 제외)
 const BOTTOM_AD_PATHS = ['/analysis', '/community']
 // 새 약관 동의 전에도 열 수 있는 화면 (약관 읽기, 탈퇴)
-const OPEN_BEFORE_AGREE = ['/terms', '/privacy', '/account']
+const OPEN_BEFORE_AGREE = ['/terms', '/privacy', '/account']   // 가이드(/guide...)는 아래에서 따로 허용
 
 export default function Layout() {
   const cls = ({ isActive }) => (isActive ? 'active' : '')
@@ -33,6 +33,7 @@ export default function Layout() {
             <NavLink to="/draws" className={cls}>회차 번호</NavLink>
             <NavLink to="/analysis" className={cls}>가설 분석</NavLink>
             <NavLink to="/community" className={cls}>커뮤니티</NavLink>
+            <NavLink to="/guide" className={cls}>가이드</NavLink>
             {me?.loggedIn && <NavLink to="/mypage" className={cls}>마이페이지</NavLink>}
             {admin && <NavLink to="/admin" className={cls}>관리자</NavLink>}
           </nav>
@@ -58,7 +59,7 @@ export default function Layout() {
           )}
         </div>
       </header>
-      {me?.termsRequired && !OPEN_BEFORE_AGREE.includes(pathname) ? <TermsGate /> : <Outlet />}
+      {me?.termsRequired && !OPEN_BEFORE_AGREE.includes(pathname) && !pathname.startsWith('/guide') ? <TermsGate /> : <Outlet />}
       {BOTTOM_AD_PATHS.includes(pathname) && <AdSlot key={pathname} type="bottom" />}
       <footer className="footer-dark">
         <div className="container">
@@ -69,6 +70,7 @@ export default function Layout() {
           </Link>
           <p>회차별 번호 출현 횟수를 분석해서 내 가설이 맞았는지 기록하는 개인 분석 도구입니다.</p>
           <nav className="footer-links" aria-label="약관">
+            <Link to="/guide">가이드</Link>
             <Link to="/terms">이용약관</Link>
             <Link to="/privacy"><b>개인정보 처리방침</b></Link>
           </nav>

@@ -9,6 +9,7 @@ import Community from './pages/Community.jsx'
 import Account from './pages/Account.jsx'
 import MyPage from './pages/MyPage.jsx'
 import { Privacy, Terms } from './pages/Legal.jsx'
+import { GuideIndex, GuideArticle } from './pages/Guide.jsx'
 
 export default function App() {
   return (
@@ -25,6 +26,8 @@ export default function App() {
         <Route path="/mypage" element={<MyPage />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
+        <Route path="/guide" element={<GuideIndex />} />
+        <Route path="/guide/:slug" element={<GuideArticle />} />
       </Route>
     </Routes>
   )
