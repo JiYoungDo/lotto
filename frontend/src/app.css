@@ -672,3 +672,5 @@ input[type=file].input { padding: 10px 16px; height: auto; }
 .fold[open] > summary::before { content: '▾ '; }
 .fold > summary .display-sm { display: inline; }
 .fold-text { font-size: 13px; line-height: 1.6; color: var(--muted); margin-bottom: 16px; }
+.case-link { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+.case-card { scroll-margin-top: 90px; }

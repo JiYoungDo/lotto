@@ -74,6 +74,11 @@ export default function Analysis() {
   const best = data?.stats.length ? data.stats.reduce((a, b) => (b.pValue < a.pValue ? b : a)) : null
   const totalHits = data ? data.stats.reduce((sum, s) => sum + s.hits, 0) : 0 // 가설끼리 겹치지 않아 그대로 더함
 
+  const goCase = (e, n) => {
+    e.preventDefault()
+    document.getElementById(`case-${n}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
   return (
     <>
       <section className="hero-dark">
@@ -111,15 +116,24 @@ export default function Analysis() {
         </div>
       </section>
 
-      <section className="section band-soft">
+      <section className="section" id="judge">
         <div className="container">
           <div className="section-head">
             <h2 className="display-sm">회차별 판정</h2>
             <p>
-              흐린 공은 그 회차 직전 기준 가운데 번호가 아닌 번호입니다. 케이스 칸 아래 숫자는 그 회차에서 그 케이스를 만족하는 전체 조합 수(후보 가짓수, 전체 8,145,060개 중, 제외 조합은 뺀 값)이고, 초록 숫자는 그중 5등 이상에 당첨되는 조합 수입니다. 회차를 누르면 케이스별 1등~5등 조합 수가 펼쳐집니다. 맨 오른쪽 칸은 당첨 번호 중 바로 직전 회차 당첨 번호와 겹친 개수와 그 번호입니다 (보너스 제외).
-              {data && data.rows.length > 0 && ` 최신 회차부터 ${RECENT}회씩 보여주며, 맨 아래 더 보기로 이전 회차를 이어서 볼 수 있습니다.`}
+              회차를 누르면 등수별 조합 수가, 가설 번호를 누르면 가설 설명이 나옵니다. 흐린 공은 가운데 번호가 아닌 번호예요.
+              {data && data.rows.length > 0 && ` 최근 ${RECENT}회씩 보여줍니다.`}
             </p>
           </div>
+          {data?.repeat && data.repeat.pairs > 0 && (
+            <ul className="verdict-lines">
+              <li>
+                {data.repeat.pairs.toLocaleString()}번 중 <b>{data.repeat.atLeastOne.toLocaleString()}번</b>({pct((data.repeat.atLeastOne / data.repeat.pairs) * 100)})은 직전 회차 번호가 1개 이상 다시 나왔습니다.
+              </li>
+              <li>무작위로 뽑아도 {pct((data.repeat.expectedAtLeastOne / data.repeat.pairs) * 100)}({data.repeat.expectedAtLeastOne.toFixed(1)}번)는 1개 이상 겹칩니다.</li>
+              <li>실제 비율이 무작위 기대 비율보다 뚜렷이 높을 때만 가설에 근거가 생깁니다.</li>
+            </ul>
+          )}
           {data && data.rows.length > 0 && (
             <>
               <div className="first-grid">
@@ -138,15 +152,19 @@ export default function Analysis() {
             </>
           )}
           <div className="feature-card">
-            <div className="table-wrap">
+            <div className="table-wrap judge-scroll">
               {rows.length === 0 ? (
                 <p className="empty">표시할 회차가 없습니다.</p>
               ) : (
-                <table className="list-table">
+                <table className="list-table judge-table">
                   <thead>
                     <tr>
-                      <th>회차</th><th>번호</th><th className="r">가운데 수</th>
-                      {CASES.map((t, i) => <th key={i} title={t}>케이스 {i + 1}</th>)}
+                      <th>회차</th><th>번호</th>
+                      {CASES.map((t, i) => (
+                        <th key={i} title={t} className="c">
+                          <a className="case-link" href={`#case-${i + 1}`} onClick={(e) => goCase(e, i + 1)}>가설 {i + 1}</a>
+                        </th>
+                      ))}
                       <th className="r" title="당첨 번호 6개 중 바로 직전 회차 당첨 번호 6개와 겹치는 개수 (보너스 제외)">직전 회차 번호</th>
                     </tr>
                   </thead>
@@ -157,7 +175,6 @@ export default function Analysis() {
                             aria-expanded={open === a.round}>
                           <td className="num">{a.round}</td>
                           <td><Balls numbers={a.numbers} bonus={a.bonus} dim={[...a.numbers, a.bonus].filter((n) => n != null && !a.center.includes(n))} /></td>
-                          <td className="r num muted">{a.numbers.filter((n) => a.center.includes(n)).length} / {a.center.length}</td>
                           {a.hits.map((h, i) => {
                             const wins = a.prizes ? a.prizes[i].reduce((x, y) => x + y, 0) : null
                             return (
@@ -182,7 +199,7 @@ export default function Analysis() {
                         </tr>
                         {open === a.round && a.prizes && (
                           <tr className="prize-detail">
-                            <td colSpan={4 + CASES.length}>
+                            <td colSpan={3 + CASES.length}>
                               <table className="prize-table">
                                 <thead>
                                   <tr><th>{a.round}회 케이스</th><th>후보 조합</th>{RANKS.map((r) => <th key={r}>{r}</th>)}<th>5등 이상</th><th>5등 이상 확률</th></tr>
@@ -430,7 +447,7 @@ export default function Analysis() {
           </div>
           <div className="case-grid">
             {CASE_GUIDE.map((g, i) => (
-              <div className="feature-card case-card" key={i}>
+              <div className="feature-card case-card" key={i} id={`case-${i + 1}`}>
                 <div className="case-no">케이스 {i + 1}</div>
                 <div className="title-md">{g.title}</div>
                 <div className="pips" aria-hidden="true">
