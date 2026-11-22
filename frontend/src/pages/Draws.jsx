@@ -7,6 +7,7 @@ import CatchGame from '../components/CatchGame.jsx'
 import AdSlot from '../components/AdSlot.jsx'
 import Balls from '../components/Balls.jsx'
 import { useDrawEvents } from '../drawEvents.js'
+import { formatDrawDate, pad2, useCountdown } from '../drawDate.js'
 
 // 회차 번호 화면: 최신 당첨 번호 + 다음 회차 남은 조합 현황
 export default function Draws() {
@@ -24,6 +25,8 @@ export default function Draws() {
   }, [tick])
 
   const latest = data?.draws[0]
+  const next = data?.nextDraw
+  const cd = useCountdown(next)
 
   return (
     <>
@@ -42,12 +45,28 @@ export default function Draws() {
           <div className="hero-cards">
             <div className="card-dark card-back">
               <div className="card-label">최신 회차</div>
-              <div className="card-stat" style={{ fontSize: 32, marginBottom: 0 }}>{latest ? `${latest.round}회` : '-'}</div>
+              <div className="card-stat" style={{ fontSize: 32, marginBottom: 4 }}>{latest ? `${latest.round}회` : '-'}</div>
+              <div className="card-label">{latest ? formatDrawDate(latest.date) : ''}</div>
             </div>
             <div className="card-dark card-main">
-              <div className="card-label">저장된 회차</div>
-              <div className="card-stat">{data ? data.total.toLocaleString() : '-'}</div>
-              <div className="card-label" style={{ marginBottom: 8 }}>최신 당첨 번호</div>
+              <div className="card-label">{next ? `${next.round}회 추첨까지` : '다음 추첨까지'}</div>
+              <div className="card-stat" style={{ marginBottom: 8 }}>
+                {!cd ? '-' : cd.over ? '추첨 완료' : cd.dday <= 0 ? 'D-DAY' : `D-${cd.dday}`}
+              </div>
+              {cd && (cd.over ? (
+                <p className="countdown-note">추첨이 끝났어요. 당첨 번호가 등록되면 바로 바뀝니다.</p>
+              ) : (
+                <div className="countdown-clock num" role="timer" aria-live="off">
+                  {cd.days > 0 && <>{cd.days}<small>일</small></>}
+                  {pad2(cd.hours)}<small>시간</small>{pad2(cd.minutes)}<small>분</small>{pad2(cd.seconds)}<small>초</small>
+                </div>
+              ))}
+              <div className="card-row"><span>추첨 일시</span><span className="num">{next ? `${formatDrawDate(next.date)} 20:35` : '-'}</span></div>
+              <div className="card-row"><span>저장된 회차</span><span className="num">{data ? data.total.toLocaleString() : '-'}</span></div>
+              <div className="card-row" style={{ paddingBottom: 8 }}>
+                <span>{latest ? `${latest.round}회 당첨 번호` : '최신 당첨 번호'}</span>
+                <span className="num">{latest ? formatDrawDate(latest.date) : ''}</span>
+              </div>
               <div>{latest ? <Balls numbers={latest.numbers} bonus={latest.bonus} /> : <span className="num">-</span>}</div>
             </div>
           </div>

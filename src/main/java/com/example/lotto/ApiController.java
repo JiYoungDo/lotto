@@ -47,8 +47,8 @@ public class ApiController {
         return tickets.pool(conf);
     }
 
-    /** 새 회차 입력 요청 본문 {"round": 1247, "numbers": [1,2,3,4,5,6], "bonus": 7} */
-    public record DrawRequest(int round, List<Integer> numbers, Integer bonus) {}
+    /** 새 회차 입력 요청 본문 {"round": 1247, "numbers": [1,2,3,4,5,6], "bonus": 7, "date": "2026-11-07"} (date 생략 가능) */
+    public record DrawRequest(int round, List<Integer> numbers, Integer bonus, java.time.LocalDate date) {}
 
     /** 회차 목록: 최근 limit개(최신순) + 전체 개수 + 다음 회차 */
     @GetMapping("/draws")
@@ -64,12 +64,20 @@ public class ApiController {
                     m.put("round", d.getRound());
                     m.put("numbers", d.numbers());
                     m.put("bonus", d.getBonus());   // 없으면 null
+                    m.put("date", d.getDrawDate().toString());   // 추첨일 yyyy-MM-dd
                     return m;
                 })
                 .toList());
         Collections.reverse(recent);   // 최신 회차가 위로 (Java 17에는 List.reversed()가 없음)
 
-        return Map.of("total", total, "nextRound", nextRound, "draws", recent);
+        // 다음 추첨: 최신 회차 추첨일 + 7일 (회차가 없으면 1회 날짜), 토요일 오후 8시 35분
+        java.time.LocalDate nextDate = total == 0 ? Draw.defaultDate(1) : all.get(total - 1).getDrawDate().plusWeeks(1);
+        Map<String, Object> nextDraw = Map.of(
+                "round", nextRound,
+                "date", nextDate.toString(),
+                "drawAt", Draw.drawTime(nextDate).toOffsetDateTime().toString());   // 예: 2026-11-28T20:35+09:00
+
+        return Map.of("total", total, "nextRound", nextRound, "draws", recent, "nextDraw", nextDraw);
     }
 
     /** 새 회차 한 건 추가 (번호 6개: 1~45, 서로 다름) */
@@ -86,7 +94,7 @@ public class ApiController {
                     .body(Map.of("message", "회차와, 1~45 사이의 서로 다른 번호 6개 + 보너스 번호(6개와 다른 번호)를 입력하세요."));
         }
         List<Integer> s = n.stream().sorted().toList();
-        repo.save(new Draw(req.round(), s.get(0), s.get(1), s.get(2), s.get(3), s.get(4), s.get(5), b));
+        repo.save(new Draw(req.round(), s.get(0), s.get(1), s.get(2), s.get(3), s.get(4), s.get(5), b, req.date()));
         drawEvents.drawChanged("saved", req.round());   // 마이페이지 결과 즉시 갱신
         return ResponseEntity.ok(Map.of("message", req.round() + "회를 저장했습니다."));
     }

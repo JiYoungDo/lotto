@@ -38,7 +38,8 @@ class SecurityTest {
 
     @Test
     void 누구나_회차와_분석을_볼_수_있다() throws Exception {
-        mvc.perform(get("/api/draws")).andExpect(status().isOk());
+        mvc.perform(get("/api/draws")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.nextDraw.drawAt").isString());   // 다음 추첨 시각 (디데이 카운트용)
         mvc.perform(get("/api/analysis")).andExpect(status().isOk());
         mvc.perform(get("/api/auth/me"))
                 .andExpect(jsonPath("$.admin").value(false))
@@ -87,6 +88,22 @@ class SecurityTest {
         mvc.perform(delete("/api/draws/7").with(csrf())).andExpect(status().isUnauthorized());
         mvc.perform(delete("/api/draws/7").with(csrf()).with(user("u").roles("USER"))).andExpect(status().isForbidden());
         mvc.perform(delete("/api/draws/7").with(csrf()).with(user("admin").roles("ADMIN"))).andExpect(status().isOk());
+    }
+
+    @Test
+    void 관리자는_추첨일을_함께_등록할_수_있다() throws Exception {
+        mvc.perform(post("/api/draws").with(csrf()).with(user("admin").roles("ADMIN"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"round\":9,\"numbers\":[1,2,3,4,5,6],\"bonus\":7,\"date\":\"2003-02-02\"}"))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/draws").with(csrf()).with(user("admin").roles("ADMIN"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"round\":10,\"numbers\":[1,2,3,4,5,6],\"bonus\":7}"))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/draws").param("limit", "1000"))
+                .andExpect(jsonPath("$.draws[?(@.round==9)].date").value("2003-02-02"))
+                .andExpect(jsonPath("$.draws[?(@.round==10)].date").value("2003-02-08"));   // 비우면 계산한 날짜
+        mvc.perform(delete("/api/draws/9").with(csrf()).with(user("admin").roles("ADMIN")));
+        mvc.perform(delete("/api/draws/10").with(csrf()).with(user("admin").roles("ADMIN")));
         mvc.perform(delete("/api/draws/7").with(csrf()).with(user("admin").roles("ADMIN"))).andExpect(status().isNotFound());
     }
 

@@ -45,6 +45,13 @@ public class ImportService {
                         new Draw(round, n.get(0), n.get(1), n.get(2), n.get(3), n.get(4), n.get(5), bonus));
             }
         }
+        // 이미 등록된 회차는 추첨일을 그대로 둔다 (관리자가 고친 날짜를 엑셀이 덮어쓰지 않게)
+        for (Draw old : repo.findAllById(map.keySet())) {
+            Draw d = map.get(old.getRound());
+            List<Integer> n = d.numbers();
+            map.put(old.getRound(), new Draw(d.getRound(), n.get(0), n.get(1), n.get(2), n.get(3), n.get(4), n.get(5),
+                    d.getBonus(), old.getDrawDate()));
+        }
         repo.saveAll(map.values());
         int withBonus = (int) map.values().stream().filter(d -> d.getBonus() != null).count();
         return new ImportResult(map.size(), withBonus);

@@ -25,11 +25,11 @@ export const fetchDraws = (limit = 50) => request(`/api/draws?limit=${limit}`)
 export const fetchPool = (conf = 60) => request(`/api/draws/pool?conf=${conf}`)
 export const fetchAnalysis = (conf, min) => request(`/api/analysis?conf=${conf}&min=${min}`)
 
-export const addDraw = (round, numbers, bonus) =>
+export const addDraw = (round, numbers, bonus, date) =>
   request('/api/draws', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ round, numbers, bonus }),
+    body: JSON.stringify({ round, numbers, bonus, date: date || null }), // date 'yyyy-MM-dd', 비우면 서버가 계산
   })
 
 export const uploadExcel = (file) => {

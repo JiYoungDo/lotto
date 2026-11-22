@@ -44,6 +44,40 @@ class ImportServiceTest {
         assertEquals(List.of(10, 23, 29, 33, 37, 40, 16), byRound.get(1).numbersWithBonus());
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void 다시_올려도_등록된_추첨일은_그대로_둔다() throws IOException {
+        byte[] file;
+        try (Workbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sh = wb.createSheet();
+            sh.createRow(0).createCell(0).setCellValue("제목");
+            row(sh, 1, 5, new int[]{1, 2, 3, 4, 5, 6}, 7);
+            row(sh, 2, 6, new int[]{1, 2, 3, 4, 5, 6}, 7);
+            wb.write(out);
+            file = out.toByteArray();
+        }
+        DrawRepository repo = mock(DrawRepository.class);
+        java.time.LocalDate fixed = java.time.LocalDate.of(2003, 1, 5);   // 관리자가 고친 날짜
+        when(repo.findAllById(any())).thenReturn(List.of(new Draw(5, 9, 10, 11, 12, 13, 14, null, fixed)));
+        new ImportService(repo).importExcel(new ByteArrayInputStream(file));
+
+        ArgumentCaptor<Iterable<Draw>> saved = ArgumentCaptor.forClass(Iterable.class);
+        verify(repo).saveAll(saved.capture());
+        Map<Integer, Draw> byRound = new HashMap<>();
+        saved.getValue().forEach(d -> byRound.put(d.getRound(), d));
+        assertEquals(fixed, byRound.get(5).getDrawDate());
+        assertEquals(List.of(1, 2, 3, 4, 5, 6), byRound.get(5).numbers());   // 번호는 엑셀 값으로 바뀜
+        assertEquals(java.time.LocalDate.of(2003, 1, 11), byRound.get(6).getDrawDate());   // 새 회차는 계산한 날짜
+    }
+
+    @Test
+    void 추첨일은_1회부터_매주_토요일() {
+        assertEquals(java.time.LocalDate.of(2002, 12, 7), Draw.defaultDate(1));
+        assertEquals(java.time.LocalDate.of(2026, 11, 21), Draw.defaultDate(1251));
+        assertEquals(java.time.DayOfWeek.SATURDAY, Draw.defaultDate(1252).getDayOfWeek());
+        assertEquals("2026-11-28T20:35+09:00", Draw.drawTime(Draw.defaultDate(1252)).toOffsetDateTime().toString());
+    }
+
     private void row(Sheet sh, int r, int round, int[] nums, Object bonus) {
         Row row = sh.createRow(r);
         row.createCell(0).setCellValue(r);

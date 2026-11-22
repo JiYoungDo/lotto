@@ -135,6 +135,9 @@ a { color: var(--primary); text-decoration: none; }
 .card-stat { font: 500 56px/1.1 var(--mono); color: var(--on-dark); letter-spacing: -1px; margin: 8px 0 24px; }
 .card-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-top: 1px solid #2a2d33; font-size: 14px; color: var(--on-dark-soft); }
 .card-row .num { color: var(--on-dark); font-size: 16px; }
+.countdown-clock { font-size: 26px; color: var(--on-dark); margin-bottom: 24px; letter-spacing: -0.5px; }
+.countdown-clock small { font: 400 13px var(--font); color: var(--on-dark-soft); margin: 0 8px 0 3px; }
+.countdown-note { font-size: 14px; color: var(--on-dark-soft); margin-bottom: 24px; }
 .chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 .chip { padding: 4px 12px; border-radius: 100px; background: #23262c; color: var(--on-dark-soft); font-size: 12px; font-weight: 600; }
 @media (max-width: 1023px) { .hero-grid { grid-template-columns: 1fr; } }
