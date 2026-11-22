@@ -1,14 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- 운영 서버에서는 SitemapController 가 /sitemap.xml 을 자동으로 만듭니다 (모든 회차 포함). 이 파일은 개발 서버용 최소본입니다. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://lottoyeonguso.kr/draws</loc></url>
-  <url><loc>https://lottoyeonguso.kr/analysis</loc></url>
-  <url><loc>https://lottoyeonguso.kr/guide</loc></url>
-  <url><loc>https://lottoyeonguso.kr/guide/start</loc></url>
-  <url><loc>https://lottoyeonguso.kr/guide/center-numbers</loc></url>
-  <url><loc>https://lottoyeonguso.kr/guide/lotto-odds</loc></url>
-  <url><loc>https://lottoyeonguso.kr/guide/test-hypothesis</loc></url>
-  <url><loc>https://lottoyeonguso.kr/guide/play-responsibly</loc></url>
-  <url><loc>https://lottoyeonguso.kr/community</loc></url>
-  <url><loc>https://lottoyeonguso.kr/terms</loc></url>
-  <url><loc>https://lottoyeonguso.kr/privacy</loc></url>
 </urlset>

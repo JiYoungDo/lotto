@@ -80,6 +80,29 @@ public class ApiController {
         return Map.of("total", total, "nextRound", nextRound, "draws", recent, "nextDraw", nextDraw);
     }
 
+    /** 회차 한 건 상세 (누구나): 번호, 추첨일, 간단한 통계, 이전·다음 회차가 있는지 */
+    @GetMapping("/draws/{round}")
+    public ResponseEntity<Map<String, Object>> drawDetail(@PathVariable int round) {
+        Draw d = repo.findById(round).orElse(null);
+        if (d == null) {
+            return ResponseEntity.status(404).body(Map.of("message", round + "회는 없습니다."));
+        }
+        Draw prev = repo.findById(round - 1).orElse(null);
+        DrawStats s = DrawStats.of(d, prev);
+        Map<String, Object> m = new java.util.HashMap<>();
+        m.put("round", d.getRound());
+        m.put("numbers", d.numbers().stream().sorted().toList());
+        m.put("bonus", d.getBonus());
+        m.put("date", d.getDrawDate().toString());
+        m.put("sum", s.sum());
+        m.put("odd", s.odd());
+        m.put("low", s.low());
+        m.put("repeated", s.repeated());
+        m.put("hasPrev", prev != null);
+        m.put("hasNext", repo.existsById(round + 1));
+        return ResponseEntity.ok(m);
+    }
+
     /** 새 회차 한 건 추가 (번호 6개: 1~45, 서로 다름) */
     @PostMapping("/draws")
     public ResponseEntity<Map<String, Object>> addDraw(@RequestBody DrawRequest req) {

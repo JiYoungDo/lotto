@@ -586,6 +586,7 @@ input[type=file].input { padding: 10px 16px; height: auto; }
 .guide-list li:last-child { border-bottom: 1px solid var(--hairline); }
 .guide-list .guide-title { font-size: 18px; font-weight: 600; color: var(--ink); }
 .guide-list p { margin-top: 6px; font-size: 14px; color: var(--body); }
+.draw-nav { display: flex; justify-content: space-between; gap: 12px; margin: 24px 0; }
 .footer-links { display: flex; gap: 20px; margin-top: 20px; font-size: 13px; }
 .footer-links a { color: var(--on-dark-soft); }
 .footer-links a b { color: var(--on-dark); font-weight: 600; }

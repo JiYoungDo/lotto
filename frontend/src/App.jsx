@@ -10,6 +10,7 @@ import Account from './pages/Account.jsx'
 import MyPage from './pages/MyPage.jsx'
 import { Privacy, Terms } from './pages/Legal.jsx'
 import { GuideIndex, GuideArticle } from './pages/Guide.jsx'
+import DrawDetail from './pages/DrawDetail.jsx'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<Navigate to="/draws" replace />} />
         <Route path="/draws" element={<Draws />} />
+        <Route path="/draw/:round" element={<DrawDetail />} />
         <Route path="/analysis" element={<Analysis />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/login" element={<Login />} />

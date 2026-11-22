@@ -59,7 +59,7 @@ export default function Layout() {
           )}
         </div>
       </header>
-      {me?.termsRequired && !OPEN_BEFORE_AGREE.includes(pathname) && !pathname.startsWith('/guide') ? <TermsGate /> : <Outlet />}
+      {me?.termsRequired && !OPEN_BEFORE_AGREE.includes(pathname) && !pathname.startsWith('/guide') && !pathname.startsWith('/draw/') ? <TermsGate /> : <Outlet />}
       {BOTTOM_AD_PATHS.includes(pathname) && <AdSlot key={pathname} type="bottom" />}
       <footer className="footer-dark">
         <div className="container">

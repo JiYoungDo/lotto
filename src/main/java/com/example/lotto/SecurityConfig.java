@@ -28,12 +28,13 @@ import java.io.IOException;
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, MemberService members) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, MemberService members,
+            @org.springframework.beans.factory.annotation.Value("${lotto.rate-limit.enabled:true}") boolean rateLimitEnabled) throws Exception {
         var h2Console = PathPatternRequestMatcher.withDefaults().matcher("/h2-console/**");
         http
             .authorizeHttpRequests(auth -> auth
                 .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()   // 실시간 스트림(SSE)·오류 응답
-                .requestMatchers(HttpMethod.GET, "/api/draws", "/api/draws/pool", "/api/draws/stream", "/api/analysis", "/api/auth/me", "/api/auth/available", "/api/community/**",
+                .requestMatchers(HttpMethod.GET, "/api/draws", "/api/draws/pool", "/api/draws/stream", "/api/draws/*", "/api/analysis", "/api/auth/me", "/api/auth/available", "/api/community/**",
                         "/api/game/*/ranking", "/api/game/stream").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/signup").permitAll()
                 .requestMatchers("/api/auth/password", "/api/auth/nickname", "/api/auth/withdraw", "/api/auth/agree", "/api/community/**", "/api/my/**", "/api/chat/**", "/api/game/**").authenticated()   // 로그인한 회원
@@ -65,7 +66,10 @@ public class SecurityConfig {
         // 삭제·정지·권한 변경된 회원의 기존 세션을 끊는 필터
         http.addFilterBefore(new MemberSessionFilter(members), AuthorizationFilter.class);
         // 로그인·회원가입 시도 횟수 제한 (CSRF 검사보다 먼저 돌아서 모든 시도를 센다)
-        http.addFilterBefore(new RateLimitFilter(), CsrfFilter.class);
+        // 운영에서는 항상 켠다. 테스트는 한 IP로 가입을 여러 번 하므로 test 설정에서 끈다.
+        if (rateLimitEnabled) {
+            http.addFilterBefore(new RateLimitFilter(), CsrfFilter.class);
+        }
         return http.build();
     }
 

@@ -68,6 +68,7 @@ export default function Draws() {
                 <span className="num">{latest ? formatDrawDate(latest.date) : ''}</span>
               </div>
               <div>{latest ? <Balls numbers={latest.numbers} bonus={latest.bonus} /> : <span className="num">-</span>}</div>
+              {latest && <p style={{ marginTop: 12, fontSize: 14 }}><Link to={`/draw/${latest.round}`} style={{ color: 'inherit', textDecoration: 'underline' }}>{latest.round}회 자세히 보기 →</Link></p>}
             </div>
           </div>
         </div>

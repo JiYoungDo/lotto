@@ -1,30 +1,7 @@
-import { useEffect } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import AdSlot from '../components/AdSlot.jsx'
 import { GUIDES } from '../guides.jsx'
-
-// 화면마다 탭 제목과 검색 결과 설명(meta description)을 바꿉니다.
-function useSeo(title, description) {
-  useEffect(() => {
-    if (!title) return
-    const prevTitle = document.title
-    document.title = `${title} · 로또 연구소`
-    let meta = document.querySelector('meta[name="description"]')
-    const created = !meta
-    if (!meta) {
-      meta = document.createElement('meta')
-      meta.setAttribute('name', 'description')
-      document.head.appendChild(meta)
-    }
-    const prevDesc = meta.getAttribute('content')
-    meta.setAttribute('content', description || '')
-    return () => {
-      document.title = prevTitle
-      if (created) meta.remove()
-      else if (prevDesc != null) meta.setAttribute('content', prevDesc)
-    }
-  }, [title, description])
-}
+import { useSeo } from '../useSeo.js'
 
 export function GuideIndex() {
   useSeo('가이드', '로또 연구소 사용법, 중심 번호 가설, 당첨 확률, 가설 검증 방법을 정리한 가이드 글 모음입니다.')
