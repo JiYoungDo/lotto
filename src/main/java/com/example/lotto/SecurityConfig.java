@@ -9,6 +9,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 import java.io.IOException;
@@ -63,6 +64,8 @@ public class SecurityConfig {
                 .accessDeniedHandler((req, res, e) -> json(res, 403, "{\"message\":\"권한이 없거나 보안 토큰이 만료되었습니다. 새로고침 후 다시 시도하세요.\"}")));
         // 삭제·정지·권한 변경된 회원의 기존 세션을 끊는 필터
         http.addFilterBefore(new MemberSessionFilter(members), AuthorizationFilter.class);
+        // 로그인·회원가입 시도 횟수 제한 (CSRF 검사보다 먼저 돌아서 모든 시도를 센다)
+        http.addFilterBefore(new RateLimitFilter(), CsrfFilter.class);
         return http.build();
     }
 
