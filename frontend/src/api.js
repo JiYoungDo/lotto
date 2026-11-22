@@ -90,6 +90,8 @@ export const generateNumbers = (caseNo, count, conf, removed) =>
 export const fetchGenerateOptions = (caseNo, conf, removed) =>
   request(`/api/my/generate/options?caseNo=${caseNo}&conf=${conf}${excludeParam(removed)}`)
 export const fetchMyTickets = () => request('/api/my/tickets')
+export const fetchMyRewards = () => request('/api/my/rewards')
+export const attendToday = () => request('/api/my/rewards/attend', { method: 'POST' })
 export const saveTickets = (body) => request('/api/my/tickets', json('POST', body))
 export const updateTicketMemo = (id, memo) => request(`/api/my/tickets/${id}`, json('PATCH', { memo }))
 export const deleteTicket = (id) => request(`/api/my/tickets/${id}`, { method: 'DELETE' })

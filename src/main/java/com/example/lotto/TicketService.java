@@ -11,7 +11,8 @@ import java.util.*;
 @Service
 public class TicketService {
 
-    public static final int MAX_PER_ROUND = 100;   // 한 회차에 저장할 수 있는 줄 수 (1인 구매 한도 10만 원 = 100게임)
+    public static final int MAX_PER_ROUND = 100;   // 한 회차에 저장할 수 있는 최대 줄 수 (1인 구매 한도 10만 원 = 100게임)
+                                                   // 다음 회차는 기본 RewardService.BASE 줄에서 출석·게임 보상으로 늘어난다
     private static final DateTimeFormatter DT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -19,8 +20,11 @@ public class TicketService {
     private final DrawRepository draws;
     private final MemberRepository members;
     private final AnalysisService analysis;
+    private final RewardService rewards;
 
-    public TicketService(TicketRepository tickets, DrawRepository draws, MemberRepository members, AnalysisService analysis) {
+    public TicketService(TicketRepository tickets, DrawRepository draws, MemberRepository members, AnalysisService analysis,
+                         RewardService rewards) {
+        this.rewards = rewards;
         this.tickets = tickets;
         this.draws = draws;
         this.members = members;
@@ -214,8 +218,12 @@ public class TicketService {
         if (memo != null && memo.isEmpty()) memo = null;
 
         List<Ticket> existing = tickets.findByMemberIdAndRound(mid, round);
-        if (existing.size() + req.sets().size() > MAX_PER_ROUND) {
-            throw new IllegalArgumentException("한 회차에는 " + MAX_PER_ROUND + "줄까지 저장할 수 있습니다.");
+        int limit = rewards.limit(mid, round);
+        if (existing.size() + req.sets().size() > limit) {
+            int left = Math.max(0, limit - existing.size());
+            throw new IllegalArgumentException(round == next && limit < MAX_PER_ROUND
+                    ? round + "회에는 지금 " + limit + "줄까지 선점할 수 있어요 (남은 " + left + "줄). 출석 체크나 미니 게임 목표 점수로 슬롯을 늘릴 수 있어요."
+                    : "한 회차에는 " + MAX_PER_ROUND + "줄까지 저장할 수 있습니다.");
         }
         Set<List<Integer>> mine = new HashSet<>();
         for (Ticket t : existing) mine.add(t.numbers());
@@ -308,6 +316,7 @@ public class TicketService {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("nextRound", next);
         out.put("maxPerRound", MAX_PER_ROUND);
+        out.put("nextLimit", rewards.limit(mid, next));   // 다음 회차에 선점할 수 있는 줄 수 (기본 + 보상)
         out.put("tickets", rows);
         out.put("summary", summary);
         return out;

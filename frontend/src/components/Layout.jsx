@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { NavLink, Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth.js'
 import { useNotify } from '../notify.js'
@@ -16,7 +17,20 @@ export default function Layout() {
   const { unread } = useNotify()
   const admin = me?.admin
   const navigate = useNavigate()
-  const { pathname } = useLocation()
+  const { pathname, hash } = useLocation()
+  // 다른 화면에서 #id 링크로 오면 (예: 마이페이지 → /draws#catch) 그 부분으로 스크롤. 내용이 늦게 그려질 수 있어 잠깐 기다려 봄
+  useEffect(() => {
+    if (!hash) return
+    let tries = 0
+    const t = setInterval(() => {
+      const el = document.getElementById(decodeURIComponent(hash.slice(1)))
+      if (el || ++tries > 20) {
+        clearInterval(t)
+        el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 100)
+    return () => clearInterval(t)
+  }, [pathname, hash])
   const onSignOut = async () => {
     await signOut()
     navigate('/draws')

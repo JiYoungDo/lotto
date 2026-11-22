@@ -332,6 +332,17 @@ input[type=file].input { padding: 10px 16px; height: auto; }
 .pool-meta b { color: var(--ink); font-size: 12px; }
 @media (max-width: 639px) { .pool-big { font-size: 40px; } .pool-hero { padding: 24px; } }
 
+/* 출석·게임 보상 슬롯 */
+.game-reward { margin: 0 20px 16px; font-size: 13px; }
+.game-reward.got { padding: 10px 14px; border-radius: 12px; background: rgba(5, 177, 105, .1); color: var(--ink); }
+.slot-bar { height: 10px; border-radius: 5px; background: var(--surface-strong); overflow: hidden; display: flex; margin: 12px 0 8px; }
+.slot-bar > span { height: 100%; }
+.slot-bar .used { background: var(--primary); }
+.slot-bar .free { background: rgba(0, 82, 255, .25); }
+.reward-card { display: flex; flex-direction: column; gap: 8px; }
+.reward-card.done { opacity: .7; }
+.reward-card .btn { align-self: flex-start; margin-top: auto; }
+
 /* 알림 */
 .nav-bell { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 18px; font-size: 18px; line-height: 1; filter: grayscale(1); opacity: .55; }
 .nav-bell:hover { background: var(--surface, rgba(0,0,0,.05)); opacity: .9; }

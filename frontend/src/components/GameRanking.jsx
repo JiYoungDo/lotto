@@ -47,7 +47,29 @@ export function GameFoot({ phase, result, scores, runningText, onStart }) {
           {phase === 'over' ? '다시 하기' : '시작'}
         </button>
       </div>
+      <RewardLine phase={phase} scores={scores} />
       {scores.msg && <p className="notice" style={{ margin: '0 20px 16px' }}>{scores.msg}</p>}
     </>
   )
+}
+
+// 게임 보상 안내: 목표 점수를 넘기면 다음 회차 조합을 더 선점할 수 있는 슬롯 (회원만, 게임마다 하루 한 번)
+function RewardLine({ phase, scores }) {
+  const { loggedIn, mine } = scores
+  const rw = mine?.reward
+  if (!loggedIn) {
+    return <p className="game-reward caption">🎁 <Link to="/login">로그인</Link>하고 목표 점수를 넘기면 다음 회차 조합을 더 선점할 수 있어요.</p>
+  }
+  if (!rw?.goal) return null
+  if (phase === 'over' && rw.granted) {
+    return (
+      <p className="game-reward got">
+        🎁 목표 {rw.goal.toLocaleString()}점 달성! <b>{rw.round}회 선점 슬롯 +{rw.slots}줄</b> (지금 {rw.limit}줄까지) · <Link to="/mypage#make">번호 만들러 가기</Link>
+      </p>
+    )
+  }
+  if (rw.claimedToday) {
+    return <p className="game-reward caption">✅ 오늘 이 게임 보상(+{rw.slots ?? 2}줄)은 받았어요. 내일 다시 도전하세요.</p>
+  }
+  return <p className="game-reward caption">🎯 <b>{rw.goal.toLocaleString()}점</b>을 넘기면 다음 회차 조합 선점 슬롯 +{rw.slots ?? 2}줄 (하루 한 번)</p>
 }

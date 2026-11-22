@@ -51,7 +51,7 @@ export function useGameScores(game) {
     try {
       const { runId } = await pending
       const r = await submitGameScore(game, runId, score)
-      setMine({ best: r.best, plays: r.plays, rank: r.rank, newBest: r.newBest })
+      setMine({ best: r.best, plays: r.plays, rank: r.rank, newBest: r.newBest, reward: r.reward })
       setRanking(r.ranking)
     } catch (e) {
       setMsg(e.message)

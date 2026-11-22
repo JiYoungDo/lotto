@@ -28,9 +28,11 @@ public class GameService {
     private final GameScoreRepository scores;
     private final MemberRepository members;
     private final GameHub hub;
+    private final RewardService rewards;
     private final Map<String, Run> runs = new ConcurrentHashMap<>();   // "회원:게임" 별 진행 중인 판 (게임마다 한 번에 한 판)
 
-    public GameService(GameScoreRepository scores, MemberRepository members, GameHub hub) {
+    public GameService(GameScoreRepository scores, MemberRepository members, GameHub hub, RewardService rewards) {
+        this.rewards = rewards;
         this.scores = scores;
         this.members = members;
         this.hub = hub;
@@ -58,6 +60,7 @@ public class GameService {
         out.put("best", g.map(GameScore::getBest).orElse(0));
         out.put("plays", g.map(GameScore::getPlays).orElse(0));
         out.put("rank", g.map(s -> scores.countAhead(game, s.getBest(), s.getBestAt()) + 1).orElse(null));
+        out.put("reward", rewards.gameStatus(game, m.getId()));   // 목표 점수·오늘 보상 받았는지
         return out;
     }
 
@@ -99,6 +102,7 @@ public class GameService {
         out.put("score", score);
         out.put("newBest", newBest);
         out.put("ranking", after);
+        out.put("reward", rewards.onGameScore(game, m.getId(), score));   // mine 의 reward 를 이 판 결과로 덮어씀   // 목표 점수를 넘으면 다음 회차 선점 슬롯
         return out;
     }
 

@@ -43,17 +43,20 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
     private final TicketRepository tickets;
     private final ChatMessageRepository chats;
     private final GameScoreRepository gameScores;
+    private final RewardSlotRepository rewardSlots;
     private final PasswordEncoder encoder;
     private final String adminUsername;
     private final String adminPassword;
 
-    public MemberService(MemberRepository repo, TicketRepository tickets, ChatMessageRepository chats, GameScoreRepository gameScores, PasswordEncoder encoder,
+    public MemberService(MemberRepository repo, TicketRepository tickets, ChatMessageRepository chats, GameScoreRepository gameScores,
+                         RewardSlotRepository rewardSlots, PasswordEncoder encoder,
                          @Value("${lotto.admin.username:admin}") String adminUsername,
                          @Value("${lotto.admin.password:}") String adminPassword) {
         this.repo = repo;
         this.tickets = tickets;
         this.chats = chats;
         this.gameScores = gameScores;
+        this.rewardSlots = rewardSlots;
         this.encoder = encoder;
         this.adminUsername = adminUsername;
         this.adminPassword = adminPassword;
@@ -275,11 +278,12 @@ public class MemberService implements UserDetailsService, ApplicationRunner {
         remove(m);
     }
 
-    /** 회원과 그 회원의 저장 번호·1:1 채팅·게임 점수를 함께 삭제 (커뮤니티 글은 따로) */
+    /** 회원과 그 회원의 저장 번호·1:1 채팅·게임 점수·보상 슬롯을 함께 삭제 (커뮤니티 글은 따로) */
     private void remove(Member m) {
         tickets.deleteByMemberId(m.getId());
         chats.deleteByMemberId(m.getId());
         gameScores.deleteByMemberId(m.getId());
+        rewardSlots.deleteByMemberId(m.getId());
         repo.delete(m);
     }
 

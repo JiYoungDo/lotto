@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
-import { generateNumbers, fetchGenerateOptions, fetchMyTickets, saveTickets, updateTicketMemo, deleteTicket } from '../api.js'
+import { generateNumbers, fetchGenerateOptions, fetchMyTickets, saveTickets, updateTicketMemo, deleteTicket, fetchMyRewards, attendToday } from '../api.js'
 import { ballRange } from '../ball.js'
 import { useAuth } from '../auth.js'
 import Balls from '../components/Balls.jsx'
@@ -90,17 +90,20 @@ export default function MyPage() {
   const [data, setData] = useState(null)
   const [msg, setMsg] = useState(null)
   const [openRounds, setOpenRounds] = useState(null) // 사용자가 직접 펼친 회차들 (null이면 기본값)
+  const [rewards, setRewards] = useState(null)       // 다음 회차 선점 슬롯 (기본 + 출석·게임 보상)
 
   const load = () => fetchMyTickets().then(setData).catch(async (e) => {
     setMsg(e.message)
     if (e.status === 401) await refresh()
   })
-  useEffect(() => { if (me?.loggedIn) load() }, [me?.loggedIn]) // eslint-disable-line react-hooks/exhaustive-deps
+  const loadRewards = () => fetchMyRewards().then(setRewards).catch(() => {})
+  useEffect(() => { if (me?.loggedIn) { load(); loadRewards() } }, [me?.loggedIn]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 관리자가 당첨 번호를 등록하면 새로고침 없이 결과를 다시 불러옴
   useDrawEvents((e) => {
     if (!me?.loggedIn) return
     load()
+    loadRewards()   // 추첨이 끝나면 다음 회차 슬롯이 기본으로 돌아감
     if (e.action === 'saved' && e.round) setMsg(`${e.round}회 당첨 번호가 등록됐어요. 내 번호 결과를 확인하세요.`)
   })
 
@@ -160,7 +163,7 @@ export default function MyPage() {
             </div>
             <div className="card-dark card-main">
               <div className="card-label">{data ? `${data.nextRound}회` : '이번 회차'} 저장한 번호</div>
-              <div className="card-stat">{data ? thisRound : '-'}<span style={{ fontSize: 24 }}> 줄</span></div>
+              <div className="card-stat">{data ? thisRound : '-'}<span style={{ fontSize: 24 }}> / {data?.nextLimit ?? '-'}줄</span></div>
               <div className="card-row"><span>전체 저장</span><span className="num">{data ? `${tickets.length}줄` : '-'}</span></div>
               <div className="card-row"><span>최고 결과</span><span className="num">{best >= 0 ? `${best}개 일치` : '-'}</span></div>
             </div>
@@ -169,6 +172,16 @@ export default function MyPage() {
       </section>
 
       <MemberChat />
+
+      <RewardPanel rewards={rewards} used={data ? thisRound : null}
+                   onAttend={async () => {
+                     try {
+                       const r = await attendToday()
+                       setRewards(r)
+                       setMsg(r.granted ? `출석 완료! ${r.round}회 선점 슬롯이 ${r.limit}줄로 늘었어요.` : '오늘은 이미 출석했어요.')
+                       load()
+                     } catch (e) { setMsg(e.message) }
+                   }} />
 
       <Generator nextRound={data?.nextRound} onSaved={(m) => { setMsg(m); load() }} />
 
@@ -240,6 +253,68 @@ export default function MyPage() {
         </div>
       </section>
     </>
+  )
+}
+
+// ---------- 출석·게임 보상 슬롯 ----------
+
+const REWARD_LABEL = { attend: '출석 체크', catch: '번호 캐치', runner: '공 점프 러너' }
+const GAME_LINK = { catch: '/draws#catch', runner: '/draws#runner' }
+
+function RewardPanel({ rewards: r, used, onAttend }) {
+  if (!r) return null
+  const barW = (v) => `${Math.min(100, (v / r.max) * 100)}%`
+  const left = used == null ? null : Math.max(0, r.limit - used)
+  return (
+    <section className="section" id="rewards">
+      <div className="container">
+        <div className="section-head">
+          <h2 className="display-sm">선점 슬롯 늘리기</h2>
+          <p>
+            {r.round}회 조합은 기본 {r.base}줄까지 선점할 수 있어요. 출석하거나 미니 게임에서 목표 점수를 넘기면 슬롯이 늘어나요
+            (종류마다 하루 한 번, 최대 {r.max}줄). 받은 슬롯은 {r.round}회 추첨 전까지만 쓸 수 있습니다.
+          </p>
+        </div>
+        <div className="pool-hero">
+          <div>
+            <div className="caption">{r.round}회 선점 가능</div>
+            <div className="pool-big num">{r.limit}<span> 줄</span></div>
+            <div className="caption">기본 {r.base}줄 + 보상 {r.bonus}줄</div>
+          </div>
+          <div className="pool-side">
+            <div><span className="caption">저장함</span><b className="num">{used ?? '-'}줄</b></div>
+            <div><span className="caption">더 저장 가능</span><b className="num">{left ?? '-'}줄</b></div>
+          </div>
+        </div>
+        <div className="slot-bar" aria-hidden="true">
+          <span className="used" style={{ width: barW(Math.min(used ?? 0, r.limit)) }} />
+          <span className="free" style={{ width: barW(Math.max(0, r.limit - (used ?? 0))) }} />
+        </div>
+        <p className="caption" style={{ marginBottom: 16 }}>진한 부분은 저장한 줄, 옅은 부분은 아직 쓸 수 있는 슬롯 (전체 막대 = {r.max}줄)</p>
+
+        <div className="pool-grid">
+          {r.today.map((t) => (
+            <div key={t.kind} className={'pool-card reward-card' + (t.done ? ' done' : '')}>
+              <div className="pool-title">{t.label} <span className="role-badge win" style={{ marginLeft: 6 }}>+{t.slots}줄</span></div>
+              <p className="caption" style={{ margin: 0 }}>
+                {t.kind === 'attend' ? '하루 한 번 출석 체크' : <>한 판에 <b>{t.goal.toLocaleString()}점</b> 이상</>}
+              </p>
+              {t.done
+                ? <span className="caption">✅ 오늘 받음</span>
+                : t.kind === 'attend'
+                  ? <button className="btn btn-primary btn-sm" type="button" onClick={onAttend}>출석하기</button>
+                  : <Link className="btn btn-secondary btn-sm" to={GAME_LINK[t.kind]}>게임하러 가기</Link>}
+            </div>
+          ))}
+        </div>
+
+        {r.history.length > 0 && (
+          <p className="caption" style={{ marginTop: 16 }}>
+            {r.round}회 받은 보상: {r.history.map((h) => `${REWARD_LABEL[h.kind] ?? h.kind} +${h.slots}${h.score != null ? ` (${h.score.toLocaleString()}점)` : ''} · ${h.at}`).join(' / ')}
+          </p>
+        )}
+      </div>
+    </section>
   )
 }
 

@@ -15,8 +15,10 @@ public class MyPageController {
     private final TicketService tickets;
     private final WinnerService winners;
     private final MemberRepository members;
+    private final RewardService rewards;
 
-    public MyPageController(TicketService tickets, WinnerService winners, MemberRepository members) {
+    public MyPageController(TicketService tickets, WinnerService winners, MemberRepository members, RewardService rewards) {
+        this.rewards = rewards;
         this.tickets = tickets;
         this.winners = winners;
         this.members = members;
@@ -39,6 +41,18 @@ public class MyPageController {
                                                @RequestParam(defaultValue = "60") double conf,
                                                @RequestParam(required = false) List<Integer> exclude) {
         return tickets.options(caseNo, conf, exclude);
+    }
+
+    /** 다음 회차 선점 슬롯: 기본 + 출석·게임 보상, 오늘 받을 수 있는 보상 */
+    @GetMapping("/rewards")
+    public Map<String, Object> rewards(Authentication auth) {
+        return rewards.status(auth.getName());
+    }
+
+    /** 오늘 출석 체크 (하루 한 번, 다음 회차 +1줄) */
+    @PostMapping("/rewards/attend")
+    public Map<String, Object> attend(Authentication auth) {
+        return rewards.attend(auth.getName());
     }
 
     @GetMapping("/tickets")
