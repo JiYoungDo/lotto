@@ -18,7 +18,7 @@ public class SitemapController {
     private static final List<String> PAGES = List.of(
             "/draws", "/analysis", "/try", "/guide",
             "/guide/start", "/guide/center-numbers", "/guide/lotto-odds",
-            "/guide/test-hypothesis", "/guide/play-responsibly",
+            "/guide/test-hypothesis", "/guide/play-responsibly", "/guide/install-app",
             "/community", "/terms", "/privacy");
 
     private final DrawRepository repo;

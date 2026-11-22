@@ -1,5 +1,6 @@
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../auth.js'
+import InstallGuide from '../components/InstallGuide.jsx'
 import NumberMaker from '../components/NumberMaker.jsx'
 import { useSeo } from '../useSeo.js'
 
@@ -26,6 +27,7 @@ export default function Try() {
         </div>
       </section>
       <NumberMaker guest />
+      <InstallGuide />
     </>
   )
 }

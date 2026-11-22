@@ -6,6 +6,7 @@ import PoolStatus from '../components/PoolStatus.jsx'
 import BallRunner from '../components/BallRunner.jsx'
 import CatchGame from '../components/CatchGame.jsx'
 import AdSlot from '../components/AdSlot.jsx'
+import InstallGuide from '../components/InstallGuide.jsx'
 import Balls from '../components/Balls.jsx'
 import { useDrawEvents } from '../drawEvents.js'
 import { formatDrawDate, pad2, useCountdown } from '../drawDate.js'
@@ -79,6 +80,7 @@ export default function Draws() {
       </section>
 
       <PoolStatus />
+      <InstallGuide />
       <AdSlot type="inline" />
       <BallRunner />
       <CatchGame />

@@ -625,3 +625,15 @@ input[type=file].input { padding: 10px 16px; height: auto; }
 .try-cta { margin-top: 16px; padding: 16px; border: 1px solid var(--hairline, rgba(0,0,0,.12)); border-radius: 12px; }
 .try-cta p { margin-bottom: 12px; }
 .pool-hit { margin-top: 8px; }
+
+/* 홈 화면 설치 안내 카드 */
+.install-section { padding-top: 0; padding-bottom: 32px; }
+.install-card { display: flex; align-items: center; gap: 16px; padding: 16px 20px; border: 1px solid var(--hairline); border-radius: 16px; background: var(--surface-soft); }
+.install-card img { border-radius: 14px; flex: none; }
+.install-text { flex: 1; min-width: 0; }
+.install-text p { margin-top: 4px; }
+.install-actions { display: flex; gap: 8px; flex: none; }
+@media (max-width: 639px) {
+  .install-card { flex-wrap: wrap; }
+  .install-actions { width: 100%; }
+}
