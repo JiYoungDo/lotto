@@ -425,7 +425,7 @@ export default function Analysis() {
           <div className="section-head">
             <h2 className="display-sm">회차별 판정</h2>
             <p>
-              흐린 공은 그 회차 직전 기준 가운데 번호가 아닌 번호입니다. 케이스 칸 아래 숫자는 그 회차에서 그 케이스를 만족하는 전체 조합 수(후보 가짓수, 전체 8,145,060개 중, 제외 조합은 뺀 값)이고, 초록 숫자는 그중 5등 이상에 당첨되는 조합 수입니다. 회차를 누르면 케이스별 1등~5등 조합 수가 펼쳐집니다.
+              흐린 공은 그 회차 직전 기준 가운데 번호가 아닌 번호입니다. 케이스 칸 아래 숫자는 그 회차에서 그 케이스를 만족하는 전체 조합 수(후보 가짓수, 전체 8,145,060개 중, 제외 조합은 뺀 값)이고, 초록 숫자는 그중 5등 이상에 당첨되는 조합 수입니다. 회차를 누르면 케이스별 1등~5등 조합 수가 펼쳐집니다. 맨 오른쪽 칸은 당첨 번호 중 바로 직전 회차 당첨 번호와 겹친 개수와 그 번호입니다 (보너스 제외).
               {data && data.rows.length > 0 && ` 최신 회차부터 ${RECENT}회씩 보여주며, 맨 아래 더 보기로 이전 회차를 이어서 볼 수 있습니다.`}
             </p>
           </div>
@@ -456,6 +456,7 @@ export default function Analysis() {
                     <tr>
                       <th>회차</th><th>번호</th><th className="r">가운데 수</th>
                       {[1, 2, 3, 4, 5].map((c) => <th key={c} title={CASES[c - 1]}>케이스 {c}</th>)}
+                      <th className="r" title="당첨 번호 6개 중 바로 직전 회차 당첨 번호 6개와 겹치는 개수 (보너스 제외)">직전 회차 번호</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -477,10 +478,20 @@ export default function Analysis() {
                               </td>
                             )
                           })}
+                          <td className="r case-cell" title={a.prevRepeat?.length ? `직전 회차에도 나온 번호: ${a.prevRepeat.join(', ')}` : undefined}>
+                            {a.prevRepeat == null ? <span className="muted">-</span> : a.prevRepeat.length === 0 ? (
+                              <span className="muted">없음</span>
+                            ) : (
+                              <>
+                                <span className="num" style={{ fontWeight: 600 }}>포함 {a.prevRepeat.length}개</span>
+                                <span className="case-count">{a.prevRepeat.join(', ')}</span>
+                              </>
+                            )}
+                          </td>
                         </tr>
                         {open === a.round && a.prizes && (
                           <tr className="prize-detail">
-                            <td colSpan={8}>
+                            <td colSpan={9}>
                               <table className="prize-table">
                                 <thead>
                                   <tr><th>{a.round}회 케이스</th><th>후보 조합</th>{RANKS.map((r) => <th key={r}>{r}</th>)}<th>5등 이상</th><th>5등 이상 확률</th></tr>

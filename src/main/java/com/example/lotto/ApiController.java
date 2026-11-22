@@ -127,6 +127,8 @@ public class ApiController {
 
         List<Draw> draws = repo.findAllByOrderByRoundAsc();
         var rows = analysis.analyze(draws, conf, min);
+        Map<Integer, List<Integer>> byRound = new java.util.HashMap<>();
+        for (Draw d : draws) byRound.put(d.getRound(), d.numbers());
 
         List<Map<String, Object>> rowDtos = rows.stream().map(a -> {
             Map<String, Object> m = new java.util.HashMap<>();
@@ -134,6 +136,8 @@ public class ApiController {
             m.put("numbers", a.numbers());
             m.put("bonus", a.bonus());   // 없으면 null
             m.put("center", a.center().stream().sorted().toList());
+            List<Integer> prev = byRound.get(a.round() - 1);   // 직전 회차 번호 (없으면 null)
+            m.put("prevRepeat", prev == null ? null : a.numbers().stream().filter(prev::contains).toList());   // 직전 회차에도 나온 번호
             m.put("hits", IntStream.rangeClosed(1, 5).mapToObj(a::hit).toList());
             m.put("candidates", Arrays.stream(a.candidates()).boxed().toList());   // 케이스 1~5 후보 조합 수
             m.put("prizes", Arrays.stream(a.prizes())                              // [케이스][1~5등] 조합 수
