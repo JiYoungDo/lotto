@@ -91,7 +91,7 @@ export function Privacy() {
         <h2>7. 쿠키, 광고, 브라우저 알림</h2>
         {ADS_ENABLED ? (
           <>
-            <p>서비스는 로그인 상태 유지를 위해 세션 쿠키를 사용합니다. 또한 광고 게재를 위해 Google AdSense를 사용하며, Google과 그 파트너는 쿠키를 이용해 이용자의 이 사이트 및 다른 사이트 방문 기록을 바탕으로 광고를 보여 줄 수 있습니다.</p>
+            <p>서비스는 로그인 상태 유지를 위해 세션 쿠키를 사용하며, 로그인할 때 '로그인 상태 유지'를 선택하면 30일 동안 유지되는 쿠키를 추가로 사용합니다(로그아웃하면 삭제). 또한 광고 게재를 위해 Google AdSense를 사용하며, Google과 그 파트너는 쿠키를 이용해 이용자의 이 사이트 및 다른 사이트 방문 기록을 바탕으로 광고를 보여 줄 수 있습니다.</p>
             <p>맞춤 광고는 <a href="https://adssettings.google.com" target="_blank" rel="noreferrer">Google 광고 설정</a>에서 끌 수 있습니다. Google이 정보를 처리하는 방식은 <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noreferrer">Google 파트너 사이트 정책</a>에서 확인할 수 있습니다.</p>
             <p>브라우저 설정에서 쿠키를 거부할 수 있지만, 세션 쿠키를 거부하면 로그인이 필요한 기능을 쓸 수 없습니다.</p>
           </>

@@ -11,8 +11,8 @@ export default function AuthProvider({ children }) {
   const refresh = () => fetchMe().catch(() => GUEST).then((m) => { setMe(m); return m })
   useEffect(() => { refresh() }, [])
 
-  const signIn = async (username, password) => {
-    await login(username, password)
+  const signIn = async (username, password, remember = true) => {
+    await login(username, password, remember)
     return refresh() // 로그인한 사용자 정보 반환
   }
   const signOut = async () => {

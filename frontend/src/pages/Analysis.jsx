@@ -9,7 +9,6 @@ const pct = (v, d = 2) => `${v.toFixed(d)}%`
 const ALL_NUMBERS = Array.from({ length: 45 }, (_, i) => i + 1)
 const RECENT = 50
 const RANKS = ['1등', '2등', '3등', '4등', '5등']
-const fmtRate = (v) => (v === 0 ? '0%' : v < 0.01 ? '< 0.01%' : pct(v))
 
 // 후보에서 빼는 조합 안내 (key는 서버 exclusions[].key 와 같음)
 const EXCLUDE_GUIDE = {
@@ -36,15 +35,6 @@ const EXCLUDE_GUIDE = {
   },
 }
 
-
-// p-값을 사람이 읽기 쉬운 판정으로
-function verdict(s) {
-  if (s.total === 0) return { label: '-', cls: 'muted' }
-  if (s.pValue < 0.01) return { label: '강한 근거', cls: 'up' }
-  if (s.pValue < 0.05) return { label: '약한 근거', cls: 'up' }
-  if (s.actualRate < s.expectedRate) return { label: '기대보다 낮음', cls: 'down' }
-  return { label: '우연 범위', cls: 'muted' }
-}
 
 const fmtP = (p) => (p == null ? '-' : p < 0.0001 ? '< 0.0001' : p.toFixed(4))
 
@@ -92,6 +82,9 @@ export default function Analysis() {
             <span className="badge badge-dark">가설 분석</span>
             <h1 className="display-mega">가설은<br />얼마나 맞았을까</h1>
             <p className="lead">각 회차를 그 직전까지의 데이터만으로 판정하고, 무작위일 때의 기대 비율과 비교합니다.</p>
+            <div className="hero-actions">
+              <a className="btn btn-outline-dark btn-lg" href="#settings">분석 설정 바꾸기</a>
+            </div>
           </div>
           <div className="hero-cards">
             <div className="card-dark card-back">
@@ -109,46 +102,8 @@ export default function Analysis() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section" style={{ paddingBottom: 0 }}>
         <div className="container">
-          <div className="section-head">
-            <h2 className="display-sm">분석 설정</h2>
-            <p>지금까지 너무 자주도, 너무 드물게도 나오지 않은 ‘평범한’ 번호들을 가운데 번호라고 부릅니다. 두 가지 값만 정하면 됩니다. 평범함의 폭을 얼마나 넓게 볼지(신뢰구간), 그리고 판단하기 전에 데이터를 얼마나 모을지(최소 회차)입니다.</p>
-          </div>
-          <div className="feature-card">
-            <form className="inline-form" onSubmit={onSubmit}>
-              <div className="field">
-                <label className="field-label" htmlFor="conf">신뢰구간 (%)</label>
-                <input className="input num" id="conf" type="number" min="1" max="99" step="any" value={conf} onChange={(e) => setConf(e.target.value)} />
-              </div>
-              <div className="field">
-                <label className="field-label" htmlFor="min">최소 회차</label>
-                <input className="input num" id="min" type="number" min="1" step="1" value={min} onChange={(e) => setMin(e.target.value)} />
-              </div>
-              <button className="btn btn-primary" type="submit" disabled={loading || !!invalid}>
-                {loading ? '분석 중…' : '분석'}
-              </button>
-            </form>
-            {invalid && <p className="notice">{invalid}</p>}
-            <div className="setting-help">
-              <div>
-                <h3>신뢰구간 (%) — 가운데 번호 범위의 폭</h3>
-                <p>반 친구들 성적을 떠올려 보세요. 평균 근처에 가장 많은 친구가 모여 있죠. 60%로 정하면 ‘평균 근처에 모인 60%’ 안에 드는 번호를 가운데 번호로 삼습니다. 계산으로는 출현 횟수가 <b>평균 ± z × 표준편차</b> 안에 드는 번호입니다. 출현 횟수는 당첨 번호 6개와 보너스 번호 1개를 모두 누적해 세므로 평균은 회차 수 × 7 ÷ 45입니다 (50% → z 0.674, 60% → 0.842, 80% → 1.282, 95% → 1.960).</p>
-                <p>그물을 넓게 던지면 고기가 더 잘 걸리지만, 아무렇게나 던져도 잘 걸리는 건 마찬가지입니다. 값을 올리면 적중이 늘어나는 대신 무작위 기대 비율도 같이 올라가니, 적중 횟수보다 기대 비율과의 차이와 p-값을 봐 주세요. 교과서의 ‘평균을 추정하는 신뢰구간’과는 다르고, 정규분포의 비율을 범위 폭의 기준으로만 빌려 씁니다.</p>
-                {next && (
-                  <p className="setting-now">현재 적용: {data.conf}% → z = {next.z.toFixed(3)}, {next.round}회 기준 가운데 번호 {next.center.length}개, 많은 양끝 번호 {next.high.length}개</p>
-                )}
-              </div>
-              <div>
-                <h3>최소 회차 — 판정 전에 쌓을 데이터 수</h3>
-                <p>동전을 세 번 던져 세 번 다 앞면이 나왔다고 ‘앞면이 잘 나오는 동전’이라 할 수는 없죠. 처음 몇 회차는 데이터가 너무 적어 우연에 크게 흔들리므로, 판정하지 않고 밑거름으로만 씁니다. 30이면 처음 30개 회차를 모은 뒤 31번째 회차부터 판정합니다.</p>
-                <p>값을 올리면 판정은 더 차분해지지만, 판정할 회차는 그만큼 줄어듭니다. 회차 번호가 아니라 회차 개수이며, 1회부터 빠짐없이 있으면 둘이 같습니다.</p>
-                {data && (
-                  <p className="setting-now">현재 적용: 최소 {data.min}개 → 전체 {data.totalDraws.toLocaleString()}개 회차 중 {data.rows.length.toLocaleString()}개 판정</p>
-                )}
-              </div>
-            </div>
-          </div>
           {error && <p className="notice">서버에 연결하지 못했어요: {error}</p>}
           {data?.missingBonus > 0 && (
             <p className="notice">보너스 번호가 없는 회차가 {data.missingBonus.toLocaleString()}개 있습니다. 이 회차들은 출현 횟수에 당첨 번호 6개만 들어가고, 2등 조합은 3등으로 셉니다. 관리자 화면에서 I열(보너스)이 있는 엑셀을 다시 올려 주세요.</p>
@@ -159,84 +114,212 @@ export default function Analysis() {
       <section className="section band-soft">
         <div className="container">
           <div className="section-head">
-            <h2 className="display-sm">가설 적중 통계</h2>
-            <p>실제 비율이 무작위 기대 비율보다 뚜렷이 높을 때만 가설에 근거가 생깁니다. p-값은 번호가 무작위로 나온다고 가정했을 때 이만큼 이상 적중할 확률이며, 0.05보다 작아야 우연으로 보기 어렵습니다. 케이스를 5개 동시에 보므로 0.01 기준이 더 안전합니다.</p>
+            <h2 className="display-sm">회차별 판정</h2>
+            <p>
+              흐린 공은 그 회차 직전 기준 가운데 번호가 아닌 번호입니다. 케이스 칸 아래 숫자는 그 회차에서 그 케이스를 만족하는 전체 조합 수(후보 가짓수, 전체 8,145,060개 중, 제외 조합은 뺀 값)이고, 초록 숫자는 그중 5등 이상에 당첨되는 조합 수입니다. 회차를 누르면 케이스별 1등~5등 조합 수가 펼쳐집니다. 맨 오른쪽 칸은 당첨 번호 중 바로 직전 회차 당첨 번호와 겹친 개수와 그 번호입니다 (보너스 제외).
+              {data && data.rows.length > 0 && ` 최신 회차부터 ${RECENT}회씩 보여주며, 맨 아래 더 보기로 이전 회차를 이어서 볼 수 있습니다.`}
+            </p>
           </div>
+          {data && data.rows.length > 0 && (
+            <>
+              <div className="first-grid">
+                {data.stats.map((s) => (
+                  <div className="feature-card first-card" key={s.caseNo} title={CASES[s.caseNo - 1]}>
+                    <div className="case-no">케이스 {s.caseNo}</div>
+                    <div className="first-stat"><b>{s.hits.toLocaleString()}</b>번</div>
+                    <p className="caption">판정 {s.total.toLocaleString()}회 중 1등 조합이 후보에 들어 있던 회차</p>
+                    <p className="case-now">무작위 기대 {s.expectedHits.toFixed(1)}번</p>
+                  </div>
+                ))}
+              </div>
+              <p className="note" style={{ marginTop: 0, marginBottom: 24 }}>
+                전체 {data.rows.length.toLocaleString()}개 판정 회차({data.rows[0].round}회 ~ {data.rows[data.rows.length - 1].round}회)를 모두 모은 값입니다. 매 회차 그 케이스의 후보 조합을 전부 샀다면 1등에 당첨됐을 횟수와 같습니다.
+              </p>
+            </>
+          )}
           <div className="feature-card">
             <div className="table-wrap">
-              {!data ? (
-                <p className="empty">{loading ? '분석 중입니다…' : '분석 결과가 없습니다.'}</p>
-              ) : data.rows.length === 0 ? (
-                <p className="empty">분석할 회차가 부족합니다. 회차 데이터를 {data.min + 1}개 이상 올려 주세요 (현재 {data.totalDraws}개).</p>
+              {rows.length === 0 ? (
+                <p className="empty">표시할 회차가 없습니다.</p>
               ) : (
                 <table className="list-table">
                   <thead>
                     <tr>
-                      <th>케이스</th><th className="r">적중</th><th className="r">실제 비율</th>
-                      <th className="r">무작위 기대 비율</th><th className="r">차이</th><th className="r">기대 횟수</th>
-                      <th className="r">평균 후보 조합 수</th><th className="r">p-값</th><th>판정</th>
+                      <th>회차</th><th>번호</th><th className="r">가운데 수</th>
+                      {CASES.map((t, i) => <th key={i} title={t}>케이스 {i + 1}</th>)}
+                      <th className="r" title="당첨 번호 6개 중 바로 직전 회차 당첨 번호 6개와 겹치는 개수 (보너스 제외)">직전 회차 번호</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {data.stats.map((s) => {
-                      const diff = s.actualRate - s.expectedRate
-                      const v = verdict(s)
-                      return (
-                        <tr key={s.caseNo}>
-                          <td className="title-md" title={CASES[s.caseNo - 1]}>케이스 {s.caseNo}</td>
-                          <td className="r num">{s.hits} / {s.total}</td>
-                          <td className="r num">{pct(s.actualRate)}</td>
-                          <td className="r num muted">{pct(s.expectedRate)}</td>
-                          <td className={'r num ' + (diff > 0 ? 'up' : diff < 0 ? 'down' : 'muted')}>
-                            {diff > 0 ? '+' : ''}{diff.toFixed(2)}%p
+                    {rows.map((a) => (
+                      <Fragment key={a.round}>
+                        <tr className={'clickable' + (open === a.round ? ' hl' : '')} onClick={() => setOpen(open === a.round ? null : a.round)}
+                            aria-expanded={open === a.round}>
+                          <td className="num">{a.round}</td>
+                          <td><Balls numbers={a.numbers} bonus={a.bonus} dim={[...a.numbers, a.bonus].filter((n) => n != null && !a.center.includes(n))} /></td>
+                          <td className="r num muted">{a.numbers.filter((n) => a.center.includes(n)).length} / {a.center.length}</td>
+                          {a.hits.map((h, i) => {
+                            const wins = a.prizes ? a.prizes[i].reduce((x, y) => x + y, 0) : null
+                            return (
+                              <td key={i} className={'case-cell ' + (h ? 'hit' : 'miss')}
+                                  title={a.candidates ? `케이스 ${i + 1} 후보 ${a.candidates[i].toLocaleString()}개 조합` : undefined}>
+                                <span>{h ? '적중' : '-'}</span>
+                                {a.candidates && <span className="case-count">{a.candidates[i].toLocaleString()}개</span>}
+                                {wins != null && a.candidates[i] > 0 && <span className="case-win">5등↑ {wins.toLocaleString()}</span>}
+                              </td>
+                            )
+                          })}
+                          <td className="r case-cell" title={a.prevRepeat?.length ? `직전 회차에도 나온 번호: ${a.prevRepeat.join(', ')}` : undefined}>
+                            {a.prevRepeat == null ? <span className="muted">-</span> : a.prevRepeat.length === 0 ? (
+                              <span className="muted">없음</span>
+                            ) : (
+                              <>
+                                <span className="num" style={{ fontWeight: 600 }}>포함 {a.prevRepeat.length}개</span>
+                                <span className="case-count">{a.prevRepeat.join(', ')}</span>
+                              </>
+                            )}
                           </td>
-                          <td className="r num muted">{s.expectedHits.toFixed(1)}</td>
-                          <td className="r num muted">{Math.round(s.avgCandidates).toLocaleString()}</td>
-                          <td className="r num">{fmtP(s.pValue)}</td>
-                          <td className={v.cls} style={{ fontWeight: 600 }}>{v.label}</td>
                         </tr>
-                      )
-                    })}
+                        {open === a.round && a.prizes && (
+                          <tr className="prize-detail">
+                            <td colSpan={4 + CASES.length}>
+                              <table className="prize-table">
+                                <thead>
+                                  <tr><th>{a.round}회 케이스</th><th>후보 조합</th>{RANKS.map((r) => <th key={r}>{r}</th>)}<th>5등 이상</th><th>5등 이상 확률</th></tr>
+                                </thead>
+                                <tbody>
+                                  {a.prizes.map((p, i) => {
+                                    const sum = p.reduce((x, y) => x + y, 0)
+                                    const cand = a.candidates[i]
+                                    return (
+                                      <tr key={i}>
+                                        <td title={CASES[i]}>케이스 {i + 1}</td>
+                                        <td>{cand.toLocaleString()}</td>
+                                        {p.map((c, r) => <td key={r}>{c.toLocaleString()}</td>)}
+                                        <td>{sum.toLocaleString()}</td>
+                                        <td>{cand > 0 ? pct((sum / cand) * 100, 3) : '-'}</td>
+                                      </tr>
+                                    )
+                                  })}
+                                </tbody>
+                              </table>
+                              {a.bonus == null && <p className="caption" style={{ marginTop: 8 }}>이 회차는 보너스 번호가 없어 2등을 3등으로 셌습니다.</p>}
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    ))}
                   </tbody>
                 </table>
               )}
             </div>
-          </div>
-          <p className="note">{CASES.map((c, i) => `케이스 ${i + 1}: ${c}`).join(' · ')}</p>
-
-          {data?.repeat && data.repeat.pairs > 0 && (
-            <div className="exclude-block">
-              <div className="section-head">
-                <h3 className="display-xs">직전 회차 번호가 다음 회차에 다시 나온 횟수</h3>
-                <p>바로 앞 회차 당첨 번호 6개 중 몇 개가 다음 회차 당첨 번호 6개에 다시 들어 있었는지 셉니다 (보너스 번호 제외, 신뢰구간·최소 회차와 상관없이 전체 회차 기준). 가설 2·3·5·6·8·9가 기대는 ‘직전 회차 번호가 1~2개 다시 나온다’는 생각이 실제로 얼마나 맞는지 확인하는 표입니다.</p>
+            {data && data.rows.length > 0 && (
+              <div className="more-bar">
+                <span className="caption">
+                  {rows.length.toLocaleString()} / {data.rows.length.toLocaleString()}회 표시
+                  {rows.length > 0 && ` (${rows[0].round}회 ~ ${rows[rows.length - 1].round}회)`}
+                </span>
+                {hidden > 0 ? (
+                  <div className="form-actions">
+                    <button className="btn btn-secondary" type="button" onClick={() => setVisible(visible + RECENT)}>
+                      이전 {Math.min(RECENT, hidden)}회 더 보기
+                    </button>
+                    <button className="btn btn-secondary" type="button" onClick={() => setVisible(data.rows.length)}>
+                      전체 보기 (남은 {hidden.toLocaleString()}회)
+                    </button>
+                  </div>
+                ) : (
+                  visible > RECENT && (
+                    <button className="btn btn-secondary" type="button" onClick={() => setVisible(RECENT)}>최근 {RECENT}회만 보기</button>
+                  )
+                )}
               </div>
+            )}
+          </div>
+        </div>
+      </section>
+      <section className="section band-soft" id="settings">
+        <div className="container">
+          <div className="section-head">
+            <h2 className="display-sm">분석 설정</h2>
+            <p>두 값을 바꾸고 분석을 누르면 위의 판정이 다시 계산됩니다.</p>
+          </div>
+          <div className="feature-card">
+            <form onSubmit={onSubmit}>
+              <div className="setting-row">
+                <div className="field">
+                  <label className="field-label" htmlFor="conf">신뢰구간 (%)</label>
+                  <input className="input num" id="conf" type="number" min="1" max="99" step="any" value={conf} onChange={(e) => setConf(e.target.value)} />
+                </div>
+                <div className="setting-desc">
+                  <h3>가운데 번호 범위의 폭</h3>
+                  <p>지금까지 너무 자주도, 너무 드물게도 나오지 않은 ‘평범한’ 번호를 가운데 번호라고 부릅니다. 60%면 출현 횟수가 <b>평균 ± 0.842 × 표준편차</b> 안인 번호입니다. 값을 올리면 적중과 무작위 기대 비율이 같이 올라가니, 적중 횟수보다 둘의 차이와 p-값을 봐 주세요.</p>
+                  {next && <p className="setting-now">현재 적용: {data.conf}% → z = {next.z.toFixed(3)}, {next.round}회 기준 가운데 번호 {next.center.length}개, 많은 양끝 번호 {next.high.length}개</p>}
+                  <details>
+                    <summary>자세히 보기</summary>
+                    <p>반 친구들 성적을 떠올려 보세요. 평균 근처에 가장 많은 친구가 모여 있죠. 60%로 정하면 ‘평균 근처에 모인 60%’ 안에 드는 번호를 가운데 번호로 삼습니다. 출현 횟수는 당첨 번호 6개와 보너스 번호 1개를 모두 누적해 세므로 평균은 회차 수 × 7 ÷ 45입니다 (50% → z 0.674, 60% → 0.842, 80% → 1.282, 95% → 1.960).</p>
+                    <p>그물을 넓게 던지면 고기가 더 잘 걸리지만, 아무렇게나 던져도 잘 걸리는 건 마찬가지입니다. 교과서의 ‘평균을 추정하는 신뢰구간’과는 다르고, 정규분포의 비율을 범위 폭의 기준으로만 빌려 씁니다.</p>
+                  </details>
+                </div>
+              </div>
+              <div className="setting-row">
+                <div className="field">
+                  <label className="field-label" htmlFor="min">최소 회차</label>
+                  <input className="input num" id="min" type="number" min="1" step="1" value={min} onChange={(e) => setMin(e.target.value)} />
+                </div>
+                <div className="setting-desc">
+                  <h3>판정 전에 쌓을 데이터 수</h3>
+                  <p>처음 몇 회차는 데이터가 너무 적어 우연에 크게 흔들리므로 판정하지 않고 밑거름으로만 씁니다. 30이면 처음 30개 회차를 모은 뒤 31번째 회차부터 판정합니다. 값을 올리면 판정은 차분해지지만 판정할 회차가 줄어듭니다.</p>
+                  {data && <p className="setting-now">현재 적용: 최소 {data.min}개 → 전체 {data.totalDraws.toLocaleString()}개 회차 중 {data.rows.length.toLocaleString()}개 판정</p>}
+                  <details>
+                    <summary>자세히 보기</summary>
+                    <p>동전을 세 번 던져 세 번 다 앞면이 나왔다고 ‘앞면이 잘 나오는 동전’이라 할 수는 없죠. 회차 번호가 아니라 회차 개수이며, 1회부터 빠짐없이 있으면 둘이 같습니다.</p>
+                  </details>
+                </div>
+              </div>
+              <div className="setting-actions">
+                <button className="btn btn-primary" type="submit" disabled={loading || !!invalid}>
+                  {loading ? '분석 중…' : '분석'}
+                </button>
+                {invalid && <span className="notice" style={{ margin: 0 }}>{invalid}</span>}
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      {data && data.rows.length > 0 && data.stats[0]?.prizeCombos && (
+        <section className="section">
+          <div className="container">
+            <details className="fold">
+              <summary>
+                <span className="display-sm">가설별 당첨 조합 집계</span>
+                <span className="caption">펼치기 — 케이스별로 5등 이상이 나올 확률을 무작위와 비교합니다</span>
+              </summary>
+              <p className="fold-text">
+                매 회차 그 케이스의 후보 조합 중 5등 이상이 되는 조합의 비율을 판정한 회차 전체에서 평균 낸 값입니다. 아무 조합이나 샀을 때는 {pct(data.stats[0].randomWinRate, 3)}(약 1/{Math.round(100 / data.stats[0].randomWinRate)})입니다. 배율이 1보다 커도 우연의 폭이 크니 참고로만 봐 주세요.
+              </p>
               <div className="feature-card">
-                <p className="title-md" style={{ marginTop: 0 }}>
-                  {data.repeat.pairs.toLocaleString()}번 중 <b>{data.repeat.atLeastOne.toLocaleString()}번</b>({pct((data.repeat.atLeastOne / data.repeat.pairs) * 100)})은 직전 회차 번호가 1개 이상 다시 나왔습니다
-                </p>
-                <p className="case-now">무작위 기대 {data.repeat.expectedAtLeastOne.toFixed(1)}번 ({pct((data.repeat.expectedAtLeastOne / data.repeat.pairs) * 100)}) · 다시 나온 번호 합계 {data.repeat.repeatedNumbers.toLocaleString()}개 (회차당 평균 {(data.repeat.repeatedNumbers / data.repeat.pairs).toFixed(2)}개, 기대 0.80개)</p>
                 <div className="table-wrap">
                   <table className="list-table">
                     <thead>
                       <tr>
-                        <th>다시 나온 개수</th><th className="r">실제 회차 수</th><th className="r">실제 비율</th>
-                        <th className="r">무작위 기대 회차 수</th><th className="r">기대 비율</th><th className="r">차이</th>
+                        <th>케이스</th><th className="r">5등 이상 확률</th><th className="r">무작위 확률</th><th className="r">배율</th><th className="r">살 수 있던 회차</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {data.repeat.actual.map((a, k) => {
-                        const e = data.repeat.expected[k]
-                        const diff = a - e
+                      {data.stats.map((s) => {
+                        const ratio = s.randomWinRate > 0 ? s.winRate / s.randomWinRate : 0
+                        const tip = `1등 ${s.prizeCombos[0].toLocaleString()} · 2등 ${s.prizeCombos[1].toLocaleString()} · 3등 ${s.prizeCombos[2].toLocaleString()} · 4등 ${s.prizeCombos[3].toLocaleString()} · 5등 ${s.prizeCombos[4].toLocaleString()} (조합 수)`
                         return (
-                          <tr key={k}>
-                            <td className="title-md">{k}개</td>
-                            <td className="r num">{a.toLocaleString()}</td>
-                            <td className="r num">{pct((a / data.repeat.pairs) * 100)}</td>
-                            <td className="r num muted">{e.toFixed(1)}</td>
-                            <td className="r num muted">{fmtRate((e / data.repeat.pairs) * 100)}</td>
-                            <td className={'r num ' + (diff > 0.05 ? 'up' : diff < -0.05 ? 'down' : 'muted')}>
-                              {diff > 0 ? '+' : ''}{diff.toFixed(1)}
+                          <tr key={s.caseNo} title={tip}>
+                            <td className="title-md">케이스 {s.caseNo}</td>
+                            <td className="r num" style={{ fontWeight: 600 }}>{s.playable ? pct(s.winRate, 3) : '-'}</td>
+                            <td className="r num muted">{pct(s.randomWinRate, 3)}</td>
+                            <td className={'r num ' + (!s.playable ? 'muted' : ratio > 1 ? 'up' : ratio < 1 ? 'down' : 'muted')}>
+                              {s.playable ? `${ratio.toFixed(2)}배` : '-'}
                             </td>
+                            <td className="r num muted">{s.playable.toLocaleString()} / {s.total.toLocaleString()}</td>
                           </tr>
                         )
                       })}
@@ -244,51 +327,8 @@ export default function Analysis() {
                   </table>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {data && data.rows.length > 0 && data.stats[0]?.prizeCombos && (
-        <section className="section">
-          <div className="container">
-            <div className="section-head">
-              <h2 className="display-sm">가설별 당첨 조합 집계</h2>
-              <p>매 회차 그 케이스의 후보 조합 중 실제 당첨 번호와 맞춰 1등~5등이 되는 조합이 몇 개였는지 판정한 회차 전체에 걸쳐 더했습니다. 5등 이상 확률은 매 회차 그 케이스 후보에서 아무 조합이나 한 장 샀을 때 5등 이상이 나올 확률의 평균입니다. 후보가 0개인 회차는 살 수 없으니 빼고 계산합니다. 아무 조합이나 샀을 때의 확률은 {pct(data.stats[0].randomWinRate, 3)}(약 1/{Math.round(100 / data.stats[0].randomWinRate)})입니다.</p>
-            </div>
-            <div className="feature-card">
-              <div className="table-wrap">
-                <table className="list-table">
-                  <thead>
-                    <tr>
-                      <th>케이스</th>
-                      {RANKS.map((r) => <th key={r} className="r">{r} 조합</th>)}
-                      <th className="r">5등 이상 확률</th><th className="r">무작위 확률</th><th className="r">배율</th><th className="r">살 수 있던 회차</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.stats.map((s) => {
-                      const ratio = s.randomWinRate > 0 ? s.winRate / s.randomWinRate : 0
-                      return (
-                        <tr key={s.caseNo}>
-                          <td className="title-md" title={CASES[s.caseNo - 1]}>케이스 {s.caseNo}</td>
-                          {s.prizeCombos.map((c, r) => (
-                            <td key={r} className="r num" title={`회차 평균 확률 ${fmtRate(s.rankRates[r])}`}>{c.toLocaleString()}</td>
-                          ))}
-                          <td className="r num" style={{ fontWeight: 600 }}>{s.playable ? pct(s.winRate, 3) : '-'}</td>
-                          <td className="r num muted">{pct(s.randomWinRate, 3)}</td>
-                          <td className={'r num ' + (!s.playable ? 'muted' : ratio > 1 ? 'up' : ratio < 1 ? 'down' : 'muted')}>
-                            {s.playable ? `${ratio.toFixed(2)}배` : '-'}
-                          </td>
-                          <td className="r num muted">{s.playable.toLocaleString()} / {s.total.toLocaleString()}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <p className="note">1등 조합 수는 그 케이스가 적중한 회차 수와 같습니다 (당첨 번호 자체가 후보에 들어 있었다는 뜻). 배율이 1보다 크면 그 케이스 후보가 무작위보다 5등 이상을 더 자주 품었다는 뜻이지만, 우연의 폭도 크니 참고로만 봐 주세요. 숫자 칸에 마우스를 올리면 등수별 회차 평균 확률이 나옵니다.</p>
+              <p className="note">행에 마우스를 올리면 등수별 조합 수가 나옵니다. 1등 조합 수는 그 케이스가 적중한 회차 수와 같습니다.</p>
+            </details>
           </div>
         </section>
       )}
@@ -457,133 +497,6 @@ export default function Analysis() {
         </div>
       </section>
 
-      <section className="section band-soft">
-        <div className="container">
-          <div className="section-head">
-            <h2 className="display-sm">회차별 판정</h2>
-            <p>
-              흐린 공은 그 회차 직전 기준 가운데 번호가 아닌 번호입니다. 케이스 칸 아래 숫자는 그 회차에서 그 케이스를 만족하는 전체 조합 수(후보 가짓수, 전체 8,145,060개 중, 제외 조합은 뺀 값)이고, 초록 숫자는 그중 5등 이상에 당첨되는 조합 수입니다. 회차를 누르면 케이스별 1등~5등 조합 수가 펼쳐집니다. 맨 오른쪽 칸은 당첨 번호 중 바로 직전 회차 당첨 번호와 겹친 개수와 그 번호입니다 (보너스 제외).
-              {data && data.rows.length > 0 && ` 최신 회차부터 ${RECENT}회씩 보여주며, 맨 아래 더 보기로 이전 회차를 이어서 볼 수 있습니다.`}
-            </p>
-          </div>
-          {data && data.rows.length > 0 && (
-            <>
-              <div className="first-grid">
-                {data.stats.map((s) => (
-                  <div className="feature-card first-card" key={s.caseNo} title={CASES[s.caseNo - 1]}>
-                    <div className="case-no">케이스 {s.caseNo}</div>
-                    <div className="first-stat"><b>{s.hits.toLocaleString()}</b>번</div>
-                    <p className="caption">판정 {s.total.toLocaleString()}회 중 1등 조합이 후보에 들어 있던 회차</p>
-                    <p className="case-now">무작위 기대 {s.expectedHits.toFixed(1)}번</p>
-                  </div>
-                ))}
-              </div>
-              <p className="note" style={{ marginTop: 0, marginBottom: 24 }}>
-                전체 {data.rows.length.toLocaleString()}개 판정 회차({data.rows[0].round}회 ~ {data.rows[data.rows.length - 1].round}회)를 모두 모은 값입니다. 매 회차 그 케이스의 후보 조합을 전부 샀다면 1등에 당첨됐을 횟수와 같습니다.
-              </p>
-            </>
-          )}
-          <div className="feature-card">
-            <div className="table-wrap">
-              {rows.length === 0 ? (
-                <p className="empty">표시할 회차가 없습니다.</p>
-              ) : (
-                <table className="list-table">
-                  <thead>
-                    <tr>
-                      <th>회차</th><th>번호</th><th className="r">가운데 수</th>
-                      {CASES.map((t, i) => <th key={i} title={t}>케이스 {i + 1}</th>)}
-                      <th className="r" title="당첨 번호 6개 중 바로 직전 회차 당첨 번호 6개와 겹치는 개수 (보너스 제외)">직전 회차 번호</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((a) => (
-                      <Fragment key={a.round}>
-                        <tr className={'clickable' + (open === a.round ? ' hl' : '')} onClick={() => setOpen(open === a.round ? null : a.round)}
-                            aria-expanded={open === a.round}>
-                          <td className="num">{a.round}</td>
-                          <td><Balls numbers={a.numbers} bonus={a.bonus} dim={[...a.numbers, a.bonus].filter((n) => n != null && !a.center.includes(n))} /></td>
-                          <td className="r num muted">{a.numbers.filter((n) => a.center.includes(n)).length} / {a.center.length}</td>
-                          {a.hits.map((h, i) => {
-                            const wins = a.prizes ? a.prizes[i].reduce((x, y) => x + y, 0) : null
-                            return (
-                              <td key={i} className={'case-cell ' + (h ? 'hit' : 'miss')}
-                                  title={a.candidates ? `케이스 ${i + 1} 후보 ${a.candidates[i].toLocaleString()}개 조합` : undefined}>
-                                <span>{h ? '적중' : '-'}</span>
-                                {a.candidates && <span className="case-count">{a.candidates[i].toLocaleString()}개</span>}
-                                {wins != null && a.candidates[i] > 0 && <span className="case-win">5등↑ {wins.toLocaleString()}</span>}
-                              </td>
-                            )
-                          })}
-                          <td className="r case-cell" title={a.prevRepeat?.length ? `직전 회차에도 나온 번호: ${a.prevRepeat.join(', ')}` : undefined}>
-                            {a.prevRepeat == null ? <span className="muted">-</span> : a.prevRepeat.length === 0 ? (
-                              <span className="muted">없음</span>
-                            ) : (
-                              <>
-                                <span className="num" style={{ fontWeight: 600 }}>포함 {a.prevRepeat.length}개</span>
-                                <span className="case-count">{a.prevRepeat.join(', ')}</span>
-                              </>
-                            )}
-                          </td>
-                        </tr>
-                        {open === a.round && a.prizes && (
-                          <tr className="prize-detail">
-                            <td colSpan={4 + CASES.length}>
-                              <table className="prize-table">
-                                <thead>
-                                  <tr><th>{a.round}회 케이스</th><th>후보 조합</th>{RANKS.map((r) => <th key={r}>{r}</th>)}<th>5등 이상</th><th>5등 이상 확률</th></tr>
-                                </thead>
-                                <tbody>
-                                  {a.prizes.map((p, i) => {
-                                    const sum = p.reduce((x, y) => x + y, 0)
-                                    const cand = a.candidates[i]
-                                    return (
-                                      <tr key={i}>
-                                        <td title={CASES[i]}>케이스 {i + 1}</td>
-                                        <td>{cand.toLocaleString()}</td>
-                                        {p.map((c, r) => <td key={r}>{c.toLocaleString()}</td>)}
-                                        <td>{sum.toLocaleString()}</td>
-                                        <td>{cand > 0 ? pct((sum / cand) * 100, 3) : '-'}</td>
-                                      </tr>
-                                    )
-                                  })}
-                                </tbody>
-                              </table>
-                              {a.bonus == null && <p className="caption" style={{ marginTop: 8 }}>이 회차는 보너스 번호가 없어 2등을 3등으로 셌습니다.</p>}
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-            {data && data.rows.length > 0 && (
-              <div className="more-bar">
-                <span className="caption">
-                  {rows.length.toLocaleString()} / {data.rows.length.toLocaleString()}회 표시
-                  {rows.length > 0 && ` (${rows[0].round}회 ~ ${rows[rows.length - 1].round}회)`}
-                </span>
-                {hidden > 0 ? (
-                  <div className="form-actions">
-                    <button className="btn btn-secondary" type="button" onClick={() => setVisible(visible + RECENT)}>
-                      이전 {Math.min(RECENT, hidden)}회 더 보기
-                    </button>
-                    <button className="btn btn-secondary" type="button" onClick={() => setVisible(data.rows.length)}>
-                      전체 보기 (남은 {hidden.toLocaleString()}회)
-                    </button>
-                  </div>
-                ) : (
-                  visible > RECENT && (
-                    <button className="btn btn-secondary" type="button" onClick={() => setVisible(RECENT)}>최근 {RECENT}회만 보기</button>
-                  )
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
     </>
   )
 }

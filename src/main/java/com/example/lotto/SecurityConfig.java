@@ -29,7 +29,9 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, MemberService members,
-            @org.springframework.beans.factory.annotation.Value("${lotto.rate-limit.enabled:true}") boolean rateLimitEnabled) throws Exception {
+            @org.springframework.beans.factory.annotation.Value("${lotto.rate-limit.enabled:true}") boolean rateLimitEnabled,
+            @org.springframework.beans.factory.annotation.Value("${lotto.remember-me.key:}") String rememberKey,
+            @org.springframework.beans.factory.annotation.Value("${lotto.admin.password:}") String adminPassword) throws Exception {
         var h2Console = PathPatternRequestMatcher.withDefaults().matcher("/h2-console/**");
         http
             .authorizeHttpRequests(auth -> auth
@@ -63,6 +65,14 @@ public class SecurityConfig {
                     else json(res, 401, "{\"message\":\"로그인이 필요합니다.\"}");
                 })
                 .accessDeniedHandler((req, res, e) -> json(res, 403, "{\"message\":\"권한이 없거나 보안 토큰이 만료되었습니다. 새로고침 후 다시 시도하세요.\"}")));
+        // 로그인 유지: 로그인할 때 remember-me=true 를 보내면 30일짜리 쿠키를 추가로 준다.
+        // 세션은 서버 메모리에만 있어서 서버를 다시 켜거나(배포) 30분 쉬면 사라지는데, 이 쿠키가 있으면 다음 요청에서 자동으로 다시 로그인된다.
+        http.rememberMe(rm -> rm
+                .key(rememberKey(rememberKey, adminPassword))
+                .userDetailsService(members)
+                .rememberMeParameter("remember-me")
+                .rememberMeCookieName("lotto-remember")
+                .tokenValiditySeconds(30 * 24 * 60 * 60));
         // 삭제·정지·권한 변경된 회원의 기존 세션을 끊는 필터
         http.addFilterBefore(new MemberSessionFilter(members), AuthorizationFilter.class);
         // 로그인·회원가입 시도 횟수 제한 (CSRF 검사보다 먼저 돌아서 모든 시도를 센다)
@@ -71,6 +81,22 @@ public class SecurityConfig {
             http.addFilterBefore(new RateLimitFilter(), CsrfFilter.class);
         }
         return http.build();
+    }
+
+    /**
+     * 로그인 유지 쿠키를 만드는 비밀 키. 서버를 다시 켜도 같아야 쿠키가 계속 쓰인다.
+     * 따로 정하지 않으면 관리자 비밀번호에서 만든다 (관리자 비밀번호를 바꾸면 모두 한 번 다시 로그인).
+     */
+    static String rememberKey(String configured, String adminPassword) {
+        if (configured != null && !configured.isBlank()) return configured;
+        String seed = (adminPassword == null || adminPassword.isBlank()) ? "dev-only" : adminPassword;
+        try {
+            byte[] h = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(("lotto-remember-me:" + seed).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(h);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private static void json(HttpServletResponse res, int status, String body) throws IOException {

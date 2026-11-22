@@ -637,3 +637,38 @@ input[type=file].input { padding: 10px 16px; height: auto; }
   .install-card { flex-wrap: wrap; }
   .install-actions { width: 100%; }
 }
+
+/* 로그인 상태 유지 체크 */
+.remember-row { display: flex; align-items: center; gap: 8px; margin: 12px 0; font-size: 14px; color: var(--body); cursor: pointer; }
+.remember-row input { width: 18px; height: 18px; }
+
+/* ---------- 분석 페이지 정리 ---------- */
+.setting-row { display: grid; grid-template-columns: 200px 1fr; gap: 32px; align-items: start; padding: 20px 0; border-bottom: 1px solid var(--hairline); }
+.setting-row:first-child { padding-top: 0; }
+.setting-desc h3 { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+.setting-desc p { font-size: 12px; line-height: 1.6; color: var(--muted); }
+.setting-desc p + p { margin-top: 6px; }
+.setting-desc b { font-weight: 600; color: var(--body); }
+.setting-desc .setting-now { margin-top: 8px; font-family: var(--mono); color: var(--body); }
+.setting-desc details { margin-top: 8px; }
+.setting-desc summary, .fold > summary { cursor: pointer; }
+.setting-desc summary { font-size: 12px; color: var(--primary); }
+.setting-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding-top: 20px; }
+@media (max-width: 767px) { .setting-row { grid-template-columns: 1fr; gap: 12px; } }
+
+.verdict-lines { list-style: none; margin: 0 0 20px; padding: 0; }
+.verdict-lines li { font-size: 15px; line-height: 1.8; color: var(--body); }
+.verdict-lines li + li { margin-top: 2px; }
+.verdict-lines b { font-family: var(--mono); color: var(--ink); }
+
+.judge-scroll { max-height: 72vh; overflow: auto; }
+.judge-table th { position: sticky; top: 0; z-index: 2; background: var(--canvas); }
+.judge-table th.c { text-align: center; }
+.judge-table td.case-cell { text-align: center; }
+
+.fold > summary { display: flex; flex-direction: column; gap: 4px; list-style: none; padding: 16px 0; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::before { content: '▸ '; color: var(--muted); }
+.fold[open] > summary::before { content: '▾ '; }
+.fold > summary .display-sm { display: inline; }
+.fold-text { font-size: 13px; line-height: 1.6; color: var(--muted); margin-bottom: 16px; }

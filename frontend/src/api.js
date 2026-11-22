@@ -43,8 +43,8 @@ export const deleteDraw = (round) => request(`/api/draws/${round}`, { method: 'D
 
 // 로그인
 export const fetchMe = () => request('/api/auth/me')
-export const login = (username, password) =>
-  request('/api/auth/login', { method: 'POST', body: new URLSearchParams({ username, password }) })
+export const login = (username, password, remember = true) =>
+  request('/api/auth/login', { method: 'POST', body: new URLSearchParams({ username, password, ...(remember ? { 'remember-me': 'true' } : {}) }) })
 export const logout = () => request('/api/auth/logout', { method: 'POST' })
 export const signUp = (username, nickname, password, adult, agreeTerms, agreePrivacy) =>
   request('/api/auth/signup', {

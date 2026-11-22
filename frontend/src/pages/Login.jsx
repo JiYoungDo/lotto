@@ -8,6 +8,7 @@ export default function Login() {
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [remember, setRemember] = useState(true) // 로그인 상태 유지 (30일)
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
 
@@ -19,7 +20,7 @@ export default function Login() {
     setBusy(true)
     setError(null)
     try {
-      const m = await signIn(username, password)
+      const m = await signIn(username, password, remember)
       navigate(m.admin ? '/admin' : '/mypage', { replace: true })
     } catch (err) {
       setError(err.message)
@@ -46,9 +47,14 @@ export default function Login() {
               <input className="input" id="password" type="password" autoComplete="current-password" required
                      value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
+            <label className="remember-row">
+              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+              <span>로그인 상태 유지 (30일)</span>
+            </label>
             <button className="btn btn-primary" type="submit" disabled={busy}>{busy ? '로그인 중…' : '로그인'}</button>
           </form>
           {error && <p className="notice">{error}</p>}
+          {remember && <p className="caption">공용 컴퓨터라면 체크를 풀어 주세요. 로그아웃하면 유지 기능도 함께 꺼집니다.</p>}
           <p className="form-foot">계정이 없나요? <Link to="/signup">회원가입</Link></p>
         </div>
       </div>
