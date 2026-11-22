@@ -18,6 +18,10 @@ export default function Layout() {
   const admin = me?.admin
   const navigate = useNavigate()
   const { pathname, hash } = useLocation()
+  // 화면(주소)이 바뀌면 맨 위에서 시작. 안 그러면 이전 화면의 스크롤 위치가 그대로 남아 중간이나 아래로 열린다
+  useEffect(() => {
+    if (!hash) window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [pathname]) // eslint-disable-line react-hooks/exhaustive-deps
   // 다른 화면에서 #id 링크로 오면 (예: 마이페이지 → /draws#catch) 그 부분으로 스크롤. 내용이 늦게 그려질 수 있어 잠깐 기다려 봄
   useEffect(() => {
     if (!hash) return

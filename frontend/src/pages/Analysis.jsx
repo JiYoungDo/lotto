@@ -7,7 +7,8 @@ import AdSlot from '../components/AdSlot.jsx'
 
 const pct = (v, d = 2) => `${v.toFixed(d)}%`
 const ALL_NUMBERS = Array.from({ length: 45 }, (_, i) => i + 1)
-const RECENT = 50
+const RECENT = 10 // 처음에 보여줄 회차 수
+const MORE = 50 // 더 보기 한 번에 늘릴 회차 수
 const RANKS = ['1등', '2등', '3등', '4등', '5등']
 
 // 후보에서 빼는 조합 안내 (key는 서버 exclusions[].key 와 같음)
@@ -36,6 +37,8 @@ const EXCLUDE_GUIDE = {
 }
 
 
+// 문장마다 줄바꿈
+const lines = (t) => t.split(/(?<=\.) /).map((x, i) => (i ? [<br key={i} />, x] : x))
 const fmtP = (p) => (p == null ? '-' : p < 0.0001 ? '< 0.0001' : p.toFixed(4))
 
 export default function Analysis() {
@@ -74,8 +77,7 @@ export default function Analysis() {
   const best = data?.stats.length ? data.stats.reduce((a, b) => (b.pValue < a.pValue ? b : a)) : null
   const totalHits = data ? data.stats.reduce((sum, s) => sum + s.hits, 0) : 0 // 가설끼리 겹치지 않아 그대로 더함
 
-  const goCase = (e, n) => {
-    e.preventDefault()
+  const goCase = (n) => {
     document.getElementById(`case-${n}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
@@ -121,8 +123,8 @@ export default function Analysis() {
           <div className="section-head">
             <h2 className="display-sm">회차별 판정</h2>
             <p>
-              회차를 누르면 등수별 조합 수가, 가설 번호를 누르면 가설 설명이 나옵니다. 흐린 공은 가운데 번호가 아닌 번호예요.
-              {data && data.rows.length > 0 && ` 최근 ${RECENT}회씩 보여줍니다.`}
+              회차를 누르면 등수별 조합 수가, 위의 케이스 카드를 누르면 가설 설명이 나옵니다. 흐린 공은 가운데 번호가 아닌 번호예요.
+              {data && data.rows.length > 0 && ` 최근 ${RECENT}회만 먼저 보여줍니다.`}
             </p>
           </div>
           {data?.repeat && data.repeat.pairs > 0 && (
@@ -138,8 +140,8 @@ export default function Analysis() {
             <>
               <div className="first-grid">
                 {data.stats.map((s) => (
-                  <div className="feature-card first-card" key={s.caseNo} title={CASES[s.caseNo - 1]}>
-                    <div className="case-no">케이스 {s.caseNo}</div>
+                  <div className="feature-card first-card case-jump" key={s.caseNo} title={CASES[s.caseNo - 1]} role="link" tabIndex={0} onClick={() => goCase(s.caseNo)} onKeyDown={(e) => e.key === 'Enter' && goCase(s.caseNo)}>
+                    <div className="case-no">케이스 {s.caseNo} · 가설 보기 →</div>
                     <div className="first-stat"><b>{s.hits.toLocaleString()}</b>번</div>
                     <p className="caption">판정 {s.total.toLocaleString()}회 중 1등 조합이 후보에 들어 있던 회차</p>
                     <p className="case-now">무작위 기대 {s.expectedHits.toFixed(1)}번</p>
@@ -152,19 +154,15 @@ export default function Analysis() {
             </>
           )}
           <div className="feature-card">
-            <div className="table-wrap judge-scroll">
+            <div className="table-wrap">
               {rows.length === 0 ? (
                 <p className="empty">표시할 회차가 없습니다.</p>
               ) : (
-                <table className="list-table judge-table">
+                <table className="list-table">
                   <thead>
                     <tr>
                       <th>회차</th><th>번호</th>
-                      {CASES.map((t, i) => (
-                        <th key={i} title={t} className="c">
-                          <a className="case-link" href={`#case-${i + 1}`} onClick={(e) => goCase(e, i + 1)}>가설 {i + 1}</a>
-                        </th>
-                      ))}
+                      {CASES.map((t, i) => <th key={i} title={t}>케이스 {i + 1}</th>)}
                       <th className="r" title="당첨 번호 6개 중 바로 직전 회차 당첨 번호 6개와 겹치는 개수 (보너스 제외)">직전 회차 번호</th>
                     </tr>
                   </thead>
@@ -238,8 +236,8 @@ export default function Analysis() {
                 </span>
                 {hidden > 0 ? (
                   <div className="form-actions">
-                    <button className="btn btn-secondary" type="button" onClick={() => setVisible(visible + RECENT)}>
-                      이전 {Math.min(RECENT, hidden)}회 더 보기
+                    <button className="btn btn-secondary" type="button" onClick={() => setVisible(visible + MORE)}>
+                      이전 {Math.min(MORE, hidden)}회 더 보기
                     </button>
                     <button className="btn btn-secondary" type="button" onClick={() => setVisible(data.rows.length)}>
                       전체 보기 (남은 {hidden.toLocaleString()}회)
@@ -305,51 +303,6 @@ export default function Analysis() {
         </div>
       </section>
 
-      {data && data.rows.length > 0 && data.stats[0]?.prizeCombos && (
-        <section className="section">
-          <div className="container">
-            <details className="fold">
-              <summary>
-                <span className="display-sm">가설별 당첨 조합 집계</span>
-                <span className="caption">펼치기 — 케이스별로 5등 이상이 나올 확률을 무작위와 비교합니다</span>
-              </summary>
-              <p className="fold-text">
-                매 회차 그 케이스의 후보 조합 중 5등 이상이 되는 조합의 비율을 판정한 회차 전체에서 평균 낸 값입니다. 아무 조합이나 샀을 때는 {pct(data.stats[0].randomWinRate, 3)}(약 1/{Math.round(100 / data.stats[0].randomWinRate)})입니다. 배율이 1보다 커도 우연의 폭이 크니 참고로만 봐 주세요.
-              </p>
-              <div className="feature-card">
-                <div className="table-wrap">
-                  <table className="list-table">
-                    <thead>
-                      <tr>
-                        <th>케이스</th><th className="r">5등 이상 확률</th><th className="r">무작위 확률</th><th className="r">배율</th><th className="r">살 수 있던 회차</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.stats.map((s) => {
-                        const ratio = s.randomWinRate > 0 ? s.winRate / s.randomWinRate : 0
-                        const tip = `1등 ${s.prizeCombos[0].toLocaleString()} · 2등 ${s.prizeCombos[1].toLocaleString()} · 3등 ${s.prizeCombos[2].toLocaleString()} · 4등 ${s.prizeCombos[3].toLocaleString()} · 5등 ${s.prizeCombos[4].toLocaleString()} (조합 수)`
-                        return (
-                          <tr key={s.caseNo} title={tip}>
-                            <td className="title-md">케이스 {s.caseNo}</td>
-                            <td className="r num" style={{ fontWeight: 600 }}>{s.playable ? pct(s.winRate, 3) : '-'}</td>
-                            <td className="r num muted">{pct(s.randomWinRate, 3)}</td>
-                            <td className={'r num ' + (!s.playable ? 'muted' : ratio > 1 ? 'up' : ratio < 1 ? 'down' : 'muted')}>
-                              {s.playable ? `${ratio.toFixed(2)}배` : '-'}
-                            </td>
-                            <td className="r num muted">{s.playable.toLocaleString()} / {s.total.toLocaleString()}</td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              <p className="note">행에 마우스를 올리면 등수별 조합 수가 나옵니다. 1등 조합 수는 그 케이스가 적중한 회차 수와 같습니다.</p>
-            </details>
-          </div>
-        </section>
-      )}
-
       <AdSlot type="inline" />
 
       {next && (
@@ -399,8 +352,8 @@ export default function Analysis() {
           <div className="container">
             <div className="section-head">
               <h2 className="display-sm">번호별 표준정규분포</h2>
-              <p>학교 성적표를 보면 평균 근처 점수를 받은 학생이 가장 많고, 아주 높거나 아주 낮은 점수로 갈수록 드물어집니다. 키도, 몸무게도 마찬가지예요. 세상의 많은 것이 이렇게 가운데가 볼록한 종 모양으로 모인다는 걸 발견하고, 그 모양을 누구나 같은 눈금으로 비교할 수 있게 다듬은 것이 표준정규분포입니다.</p>
-              <p>로또 번호도 회차가 쌓이면 (당첨 번호 6개와 보너스 번호를 모두 센 출현 횟수가) 대부분 비슷하고, 유난히 많이 또는 적게 나온 번호는 소수입니다. 각 번호가 평균에서 얼마나 떨어져 있는지(z-점수)를 이 종 위에 올려 보았습니다. 파란 영역 안, 즉 ‘반에서 평균 근처에 모인 학생들’에 해당하는 번호가 {next.round}회 기준 가운데 번호입니다. 공이나 막대에 마우스를 올리면 자세한 값이 나옵니다.</p>
+              <p>학교 성적표를 보면 평균 근처 점수를 받은 학생이 가장 많고, 아주 높거나 아주 낮은 점수로 갈수록 드물어집니다.<br />키도, 몸무게도 마찬가지예요.<br />세상의 많은 것이 이렇게 가운데가 볼록한 종 모양으로 모인다는 걸 발견하고, 그 모양을 누구나 같은 눈금으로 비교할 수 있게 다듬은 것이 표준정규분포입니다.</p>
+              <p>로또 번호도 회차가 쌓이면 (당첨 번호 6개와 보너스 번호를 모두 센 출현 횟수가) 대부분 비슷하고, 유난히 많이 또는 적게 나온 번호는 소수입니다.<br />각 번호가 평균에서 얼마나 떨어져 있는지(z-점수)를 이 종 위에 올려 보았습니다.<br />파란 영역 안, 즉 ‘반에서 평균 근처에 모인 학생들’에 해당하는 번호가 {next.round}회 기준 가운데 번호입니다.<br />공이나 막대에 마우스를 올리면 자세한 값이 나옵니다.</p>
             </div>
             <NormalChart counts={next.counts} mean={next.mean} sd={next.sd} z={next.z} draws={data.totalDraws} />
           </div>
@@ -411,15 +364,15 @@ export default function Analysis() {
         <div className="container">
           <div className="section-head">
             <h2 className="display-sm">가설 안내</h2>
-            <p>‘당첨 번호는 평범한 번호를 중심으로, 지난주 번호 한두 개와 자주 나오던 인기 번호 한두 개가 섞여 나오지 않을까?’ 하는 질문에서 출발한 아홉 가지 가설입니다. 각 회차의 당첨 번호 6개가 아래 조건에 꼭 맞으면 그 케이스를 적중으로 봅니다. 가운데·양끝 번호는 그 회차 직전까지의 데이터로만 정하니, 미래를 미리 엿보지는 않습니다. 적중은 미리 번호를 골라 맞혔다는 뜻이 아니라, 당첨 번호가 그 케이스가 그린 울타리 안에 들어 있었다는 뜻입니다.</p>
+            <p>‘당첨 번호는 평범한 번호를 중심으로, 지난주 번호 한두 개와 자주 나오던 인기 번호 한두 개가 섞여 나오지 않을까?’ 하는 질문에서 출발한 아홉 가지 가설입니다.<br />각 회차의 당첨 번호 6개가 아래 조건에 꼭 맞으면 그 케이스를 적중으로 봅니다.<br />가운데·양끝 번호는 그 회차 직전까지의 데이터로만 정하니, 미래를 미리 엿보지는 않습니다.<br />적중은 미리 번호를 골라 맞혔다는 뜻이 아니라, 당첨 번호가 그 케이스가 그린 울타리 안에 들어 있었다는 뜻입니다.</p>
           </div>
           <div className="setting-help" style={{ marginTop: 0, marginBottom: 32 }}>
             <div>
               <h3>번호를 네 묶음으로 나눕니다</h3>
-              <p><b>직전 회차 번호</b> — 바로 앞 회차 당첨 번호 6개입니다. 가운데 번호든 양끝 번호든 상관없이 이 묶음으로 셉니다.</p>
-              <p><b>가운데 번호</b> — 직전 회차 번호를 뺀 나머지 중 출현 횟수가 평균 근처(평균 ± z × 표준편차)인 번호입니다. 개수를 a라고 씁니다.</p>
-              <p><b>많은 양끝 번호</b> — 직전 회차 번호를 뺀 나머지 중 출현 횟수가 가운데 범위보다 많은, 유난히 자주 나온 번호입니다. 개수를 b라고 씁니다.</p>
-              <p><b>적은 양끝 번호</b> — 직전 회차 번호를 뺀 나머지 중 가운데 범위보다 덜 나온 번호입니다. 어느 가설에도 쓰지 않습니다.</p>
+              <p><b>직전 회차 번호</b> — 바로 앞 회차 당첨 번호 6개입니다.<br />가운데 번호든 양끝 번호든 상관없이 이 묶음으로 셉니다.</p>
+              <p><b>가운데 번호</b> — 직전 회차 번호를 뺀 나머지 중 출현 횟수가 평균 근처(평균 ± z × 표준편차)인 번호입니다.<br />개수를 a라고 씁니다.</p>
+              <p><b>많은 양끝 번호</b> — 직전 회차 번호를 뺀 나머지 중 출현 횟수가 가운데 범위보다 많은, 유난히 자주 나온 번호입니다.<br />개수를 b라고 씁니다.</p>
+              <p><b>적은 양끝 번호</b> — 직전 회차 번호를 뺀 나머지 중 가운데 범위보다 덜 나온 번호입니다.<br />어느 가설에도 쓰지 않습니다.</p>
             </div>
             <div>
               <h3>아홉 가설 한눈에 보기</h3>
@@ -453,7 +406,7 @@ export default function Analysis() {
                 <div className="pips" aria-hidden="true">
                   {g.pips.map((p, j) => <i key={j} className={'pip ' + p} />)}
                 </div>
-                <p className="case-desc">{g.desc}</p>
+                <p className="case-desc">{lines(g.desc)}</p>
                 <p className="case-formula">후보 조합 수 = {g.formula} − 제외 조합</p>
                 {next && (
                   <p className="case-now">{next.round}회 기준 후보 {next.candidates[i].toLocaleString()}개 ({pct((next.candidates[i] / 8145060) * 100)})</p>
@@ -469,20 +422,20 @@ export default function Analysis() {
           <div className="setting-help">
             <div>
               <h3>케이스끼리의 관계</h3>
-              <p>아홉 가설은 묶음별 개수(직전 회차 · 가운데 · 많은 양끝)가 모두 달라 서로 겹치지 않습니다. 한 회차는 많아야 한 가설에만 적중하고, 가설별 적중 횟수를 그대로 더해도 됩니다.</p>
-              <p>직전 회차 번호는 가운데든 양끝이든 직전 회차 묶음으로만 셉니다. 예를 들어 직전 회차 번호이면서 많이 나온 번호는 ‘많은 양끝’이 아니라 ‘직전 회차’ 1개입니다.</p>
+              <p>아홉 가설은 묶음별 개수(직전 회차 · 가운데 · 많은 양끝)가 모두 달라 서로 겹치지 않습니다.<br />한 회차는 많아야 한 가설에만 적중하고, 가설별 적중 횟수를 그대로 더해도 됩니다.</p>
+              <p>직전 회차 번호는 가운데든 양끝이든 직전 회차 묶음으로만 셉니다.<br />예를 들어 직전 회차 번호이면서 많이 나온 번호는 ‘많은 양끝’이 아니라 ‘직전 회차’ 1개입니다.</p>
             </div>
             <div>
               <h3>어느 가설에도 들지 않는 회차</h3>
               <p>당첨 번호에 적은 양끝 번호가 하나라도 있거나, 직전 회차 번호가 3개 이상이거나, 많은 양끝 번호가 3개 이상이거나, 가운데 번호가 2개 이하이면 적중 없음입니다.</p>
-              <p>a = 직전 회차를 뺀 가운데 번호 수, b = 직전 회차를 뺀 많은 양끝 번호 수, C(n, r) = n개 중 r개를 고르는 조합 수입니다. 직전 회차 번호 6개 중 1개는 6가지, 2개는 C(6, 2) = 15가지입니다. 후보가 많을수록 우연히도 자주 적중합니다.</p>
+              <p>a = 직전 회차를 뺀 가운데 번호 수, b = 직전 회차를 뺀 많은 양끝 번호 수, C(n, r) = n개 중 r개를 고르는 조합 수입니다.<br />직전 회차 번호 6개 중 1개는 6가지, 2개는 C(6, 2) = 15가지입니다.<br />후보가 많을수록 우연히도 자주 적중합니다.</p>
             </div>
           </div>
 
           <div className="exclude-block">
             <div className="section-head">
               <h3 className="display-xs">후보에서 빼는 조합</h3>
-              <p>어느 케이스든 아래 세 가지 조합은 후보 조합 수에서 뺍니다. 기준은 단순합니다. 지금까지 실제로 거의 나오지 않았고, 빼도 후보가 거의 줄지 않는 조합만 골랐습니다. 회차별 판정에서는 그 회차 직전까지 나온 당첨 조합만 빼니 이번에도 미래를 엿보지 않습니다. 당첨 번호가 이런 조합이었다면 적중으로 치지 않습니다.</p>
+              <p>어느 케이스든 아래 세 가지 조합은 후보 조합 수에서 뺍니다.<br />기준은 단순합니다.<br />지금까지 실제로 거의 나오지 않았고, 빼도 후보가 거의 줄지 않는 조합만 골랐습니다.<br />회차별 판정에서는 그 회차 직전까지 나온 당첨 조합만 빼니 이번에도 미래를 엿보지 않습니다.<br />당첨 번호가 이런 조합이었다면 적중으로 치지 않습니다.</p>
             </div>
             <div className="case-grid">
               {(data?.exclusions ?? []).map((r) => {
@@ -492,7 +445,7 @@ export default function Analysis() {
                   <div className="feature-card case-card" key={r.key}>
                     <div className="title-md">{g.title}</div>
                     <p className="case-now" style={{ marginTop: 0 }}>{g.example}</p>
-                    <p className="case-desc">{g.desc}</p>
+                    <p className="case-desc">{lines(g.desc)}</p>
                     <p className="case-formula">{g.count(r)}</p>
                     <p className="case-now">{data.totalDraws.toLocaleString()}개 회차 중 {g.expectLabel} {r.actual.toLocaleString()}번 · 무작위 기대 {r.expected.toFixed(1)}번</p>
                   </div>
@@ -502,12 +455,12 @@ export default function Analysis() {
             <div className="setting-help">
               <div>
                 <h3>왜 이 조합들만 빼나요</h3>
-                <p>홀수만 6개, 합계가 아주 작거나 큰 조합처럼 ‘왠지 안 나올 것 같은’ 모양도 따져 봤습니다. 그런데 이런 조합은 실제로 기대만큼, 때로는 기대보다 조금 더 나왔습니다. 그물에서 이걸 걷어 내면 진짜 당첨 번호까지 함께 버리게 되니 그대로 두었습니다.</p>
+                <p>홀수만 6개, 합계가 아주 작거나 큰 조합처럼 ‘왠지 안 나올 것 같은’ 모양도 따져 봤습니다.<br />그런데 이런 조합은 실제로 기대만큼, 때로는 기대보다 조금 더 나왔습니다.<br />그물에서 이걸 걷어 내면 진짜 당첨 번호까지 함께 버리게 되니 그대로 두었습니다.</p>
                 {next && <p className="setting-now">{next.round}회 기준 제외 조합 {next.excluded.toLocaleString()}개 (전체 8,145,060개 중)</p>}
               </div>
               <div>
                 <h3>빼면 당첨 확률이 오르나요</h3>
-                <p>아니요. 빠진 조합도 1등 확률은 다른 조합과 똑같이 8,145,060분의 1입니다. 추첨기는 지난 결과도, 번호의 모양도 기억하지 못하니까요. 후보 목록을 덜 어색하게 다듬는 정리일 뿐, 행운을 끌어오는 장치는 아닙니다.</p>
+                <p>아니요.<br />빠진 조합도 1등 확률은 다른 조합과 똑같이 8,145,060분의 1입니다.<br />추첨기는 지난 결과도, 번호의 모양도 기억하지 못하니까요.<br />후보 목록을 덜 어색하게 다듬는 정리일 뿐, 행운을 끌어오는 장치는 아닙니다.</p>
               </div>
             </div>
           </div>

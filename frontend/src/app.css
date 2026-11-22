@@ -24,7 +24,7 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: auto; }
 body {
   margin: 0;
   font: 400 16px/1.5 var(--font);
@@ -674,3 +674,9 @@ input[type=file].input { padding: 10px 16px; height: auto; }
 .fold-text { font-size: 13px; line-height: 1.6; color: var(--muted); margin-bottom: 16px; }
 .case-link { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
 .case-card { scroll-margin-top: 90px; }
+.case-jump { cursor: pointer; transition: box-shadow .15s; }
+.case-jump:hover, .case-jump:focus-visible { box-shadow: 0 0 0 2px var(--primary); outline: 0; }
+
+.ask-chat { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 32px 0 16px; padding: 20px 24px; border-radius: 16px; background: var(--surface-soft); }
+.ask-chat b { font-size: 16px; color: var(--ink); }
+.ask-chat p { margin: 4px 0 0; font-size: 13px; color: var(--muted); }

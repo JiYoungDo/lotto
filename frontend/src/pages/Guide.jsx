@@ -12,6 +12,7 @@ export function GuideIndex() {
           <h1 className="display-sm">가이드</h1>
           <p>로또 연구소를 쓰는 방법과, 숫자를 올바르게 읽는 방법을 정리했습니다. 모든 글은 오락·학습 용도이며 당첨을 보장하지 않습니다.</p>
         </div>
+        <AskChat />
         <ul className="guide-list">
           {GUIDES.map((g) => (
             <li key={g.slug}>
@@ -22,6 +23,18 @@ export function GuideIndex() {
         </ul>
       </div>
     </section>
+  )
+}
+
+function AskChat() {
+  return (
+    <div className="ask-chat">
+      <div>
+        <b>잘 안되나요?</b>
+        <p>막히는 부분을 남겨 주시면 로또연구소장이 직접 답해 드려요. (로그인한 회원만 쓸 수 있어요)</p>
+      </div>
+      <Link className="btn btn-primary" to="/mypage#chat">로또연구소장에게 1:1 채팅하기</Link>
+    </div>
   )
 }
 
@@ -40,6 +53,7 @@ export function GuideArticle() {
             <p className="caption">최종 수정 {guide.updated}</p>
           </div>
           <article>{guide.body}</article>
+          <AskChat />
           <p className="caption legal-foot">이 글은 오락·학습 목적의 일반적인 설명이며, 당첨을 보장하거나 확률을 높이지 않습니다. 만 19세 미만은 이용할 수 없습니다.</p>
         </div>
       </section>
