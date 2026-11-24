@@ -79,8 +79,9 @@ function NumberBoard({ opt, removed, onToggle, onReset }) {
 
 // 번호 만들기: 가설을 고르고 번호판에서 뺄 번호를 정해 번호를 뽑는다.
 // guest 이면 가입 없이 뽑아 보기만 하고(저장 불가), 저장 자리에는 가입 안내가 나온다.
+// slotsLeft 는 회원이 다음 회차에 남은 선점 슬롯 (불러오기 전이면 null). 그만큼만 만들 수 있고, 0이면 만들기가 막힌다.
 // children 은 맨 아래에 붙는 내용 (마이페이지의 직접 입력)
-export default function NumberMaker({ nextRound, onSaved, guest = false, children }) {
+export default function NumberMaker({ nextRound, onSaved, guest = false, slotsLeft = null, children }) {
   const [caseNo, setCaseNo] = useState(1)
   const [conf, setConf] = useState('60')
   const [count, setCount] = useState('5')
@@ -93,6 +94,10 @@ export default function NumberMaker({ nextRound, onSaved, guest = false, childre
   const [opt, setOpt] = useState(null)       // 번호판 미리보기 (가설에 쓰는 번호, 후보 수)
   const [optError, setOptError] = useState(null)
   const round = nextRound ?? opt?.round ?? null
+  const maxCount = guest ? 5 : Math.min(10, slotsLeft ?? 10)
+  const noSlots = !guest && slotsLeft === 0
+  // 남은 슬롯이 줄면 줄 수도 그만큼으로 맞춤
+  const countShown = maxCount > 0 && Number(count) > maxCount ? String(maxCount) : count
 
   const confNum = Number(conf)
   const confOk = conf !== '' && confNum >= 1 && confNum <= 99
@@ -111,7 +116,7 @@ export default function NumberMaker({ nextRound, onSaved, guest = false, childre
     setBusy(true)
     setError(null)
     try {
-      const g = await generateNumbers(caseNo, Number(count), Number(conf), removed, guest)
+      const g = await generateNumbers(caseNo, Number(countShown), Number(conf), removed, guest)
       setGen(g)
       setPicked(g.sets.map(() => true))
     } catch (e) {
@@ -181,10 +186,20 @@ export default function NumberMaker({ nextRound, onSaved, guest = false, childre
             </div>
             <div className="field">
               <label className="field-label" htmlFor="g-count">줄 수</label>
-              <input className="input num" id="g-count" type="number" min="1" max={guest ? 5 : 10} value={count} onChange={(e) => setCount(e.target.value)} />
+              <input className="input num" id="g-count" type="number" min="1" max={Math.max(1, maxCount)} value={countShown}
+                     disabled={noSlots} onChange={(e) => setCount(e.target.value)} />
             </div>
-            <button className="btn btn-primary" type="button" onClick={make} disabled={busy}>{gen ? '다시 만들기' : '번호 만들기'}</button>
+            <button className="btn btn-primary" type="button" onClick={make} disabled={busy || noSlots}>{gen ? '다시 만들기' : '번호 만들기'}</button>
           </div>
+          {!guest && slotsLeft != null && (
+            noSlots ? (
+              <p className="notice">
+                {round ? `${round}회 ` : ''}선점 슬롯을 모두 썼어요. <a href="#rewards">출석 체크나 미니 게임 목표 점수</a>로 슬롯을 늘리면 더 만들 수 있어요.
+              </p>
+            ) : (
+              <p className="caption" style={{ marginTop: 8 }}>남은 선점 슬롯 <b className="num">{slotsLeft}줄</b> · 한 번에 {maxCount}줄까지 만들 수 있어요.</p>
+            )
+          )}
           {error && <p className="notice">{error}</p>}
           {optError && <p className="notice">{optError}</p>}
           {opt && opt.caseNo === caseNo && <NumberBoard opt={opt} removed={removed} onToggle={toggle} onReset={() => setRemoved([])} />}

@@ -201,6 +201,33 @@ public class TicketService {
         return out;
     }
 
+    /** 이 회원이 다음 회차에 아직 선점할 수 있는 줄 수 (한도 - 이미 저장한 줄) */
+    public int slotsLeft(Long memberId, int round) {
+        return Math.max(0, rewards.limit(memberId, round) - tickets.findByMemberIdAndRound(memberId, round).size());
+    }
+
+    /**
+     * 회원 번호 만들기: 다음 회차에 남은 선점 슬롯만큼만 만들 수 있다.
+     * 슬롯을 다 쓰면 만들기 자체가 막히고, 출석·게임 보상으로 슬롯이 늘면 다시 만들 수 있다.
+     */
+    public Map<String, Object> generateFor(String username, int caseNo, int count, double conf, Collection<Integer> removed) {
+        if (count < 1 || count > 10) throw new IllegalArgumentException("한 번에 1~10줄까지 만들 수 있습니다.");
+        Long mid = memberId(username);
+        int round = rewards.nextRound();
+        int limit = rewards.limit(mid, round);
+        int left = slotsLeft(mid, round);
+        if (left == 0) {
+            throw new IllegalArgumentException(round + "회 선점 슬롯 " + limit + "줄을 모두 썼어요. 출석 체크나 미니 게임 목표 점수로 슬롯을 늘리면 더 만들 수 있어요.");
+        }
+        if (count > left) {
+            throw new IllegalArgumentException(round + "회에는 남은 선점 슬롯 " + left + "줄까지만 만들 수 있어요.");
+        }
+        Map<String, Object> out = generate(caseNo, count, conf, removed);
+        out.put("slotLimit", limit);
+        out.put("slotsLeft", left);
+        return out;
+    }
+
     // ---------- 저장·수정·삭제 ----------
 
     @Transactional

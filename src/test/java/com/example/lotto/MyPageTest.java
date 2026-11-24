@@ -76,13 +76,33 @@ class MyPageTest {
     }
 
     @Test
+    void 번호_만들기는_남은_선점_슬롯만큼만_된다() throws Exception {
+        // 기본 5줄 중 3줄 저장 → 남은 2줄
+        save("buyer", "{\"sets\":[[1,2,3,4,5,6],[7,8,9,10,11,12],[13,14,15,16,17,18]]}").andExpect(status().isCreated());
+        mvc.perform(get("/api/my/generate").param("caseNo", "0").param("count", "3").with(user("buyer").roles("USER")))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/my/generate").param("caseNo", "0").param("count", "2").with(user("buyer").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sets.length()").value(2))
+                .andExpect(jsonPath("$.slotsLeft").value(2));
+
+        // 다 쓰면 만들기 자체가 막힌다
+        save("buyer", "{\"sets\":[[19,20,21,22,23,24],[25,26,27,28,29,30]]}").andExpect(status().isCreated());
+        mvc.perform(get("/api/my/generate").param("caseNo", "0").param("count", "1").with(user("buyer").roles("USER")))
+                .andExpect(status().isBadRequest());
+        // 다른 회원은 그대로
+        mvc.perform(get("/api/my/generate").param("caseNo", "0").param("count", "5").with(user("other").roles("USER")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void 번호판에서_뺀_번호는_만든_번호에_나오지_않는다() throws Exception {
         var next = analysis.outlook(draws.findAllByOrderByRoundAsc(), 60);
         // 케이스 1은 직전 회차를 뺀 가운데 번호만 쓴다
         List<Integer> center = next.center().stream().filter(n -> !next.prevNumbers().contains(n)).toList();
         String ex = center.get(0) + "," + center.get(1);
 
-        String body = mvc.perform(get("/api/my/generate").param("caseNo", "1").param("count", "10")
+        String body = mvc.perform(get("/api/my/generate").param("caseNo", "1").param("count", "5")
                         .param("exclude", ex).with(user("buyer").roles("USER")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.removed.length()").value(2))
@@ -198,7 +218,7 @@ class MyPageTest {
                 .andExpect(jsonPath("$.cases[4].used").value(0));   // 케이스 4(가운데 4 + 많은 양끝 2)에는 해당 없음
 
         // 번호 만들기에도 남은 수가 반영되고, 저장된 조합은 나오지 않는다
-        mvc.perform(get("/api/my/generate").param("caseNo", "1").param("count", "10").with(user("other").roles("USER")))
+        mvc.perform(get("/api/my/generate").param("caseNo", "1").param("count", "5").with(user("other").roles("USER")))
                 .andExpect(jsonPath("$.used").value(1))
                 .andExpect(jsonPath("$.remaining").value(total1 - 1))
                 .andExpect(jsonPath("$.sets[?(@ == " + c1 + ")]").isEmpty());

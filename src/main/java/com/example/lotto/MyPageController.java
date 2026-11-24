@@ -26,13 +26,14 @@ public class MyPageController {
 
     public record MemoRequest(String memo) {}
 
-    /** 다음 회차 번호 생성. caseNo: 0 무작위, 1~9 가설, exclude: 뺄 번호 (예: exclude=7,12) */
+    /** 다음 회차 번호 생성 (남은 선점 슬롯만큼만). caseNo: 0 무작위, 1~9 가설, exclude: 뺄 번호 (예: exclude=7,12) */
     @GetMapping("/generate")
     public Map<String, Object> generate(@RequestParam(defaultValue = "1") int caseNo,
                                         @RequestParam(defaultValue = "5") int count,
                                         @RequestParam(defaultValue = "60") double conf,
-                                        @RequestParam(required = false) List<Integer> exclude) {
-        return tickets.generate(caseNo, count, conf, exclude);
+                                        @RequestParam(required = false) List<Integer> exclude,
+                                        Authentication auth) {
+        return tickets.generateFor(auth.getName(), caseNo, count, conf, exclude);
     }
 
     /** 번호판 미리보기: 가설에 쓰는 번호, 뺀 번호를 반영한 후보·남은 조합 수 */

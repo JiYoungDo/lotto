@@ -111,7 +111,8 @@ export default function MyPage() {
                      } catch (e) { setMsg(e.message) }
                    }} />
 
-      <NumberMaker nextRound={data?.nextRound} onSaved={(m) => { setMsg(m); load() }}>
+      <NumberMaker nextRound={data?.nextRound} slotsLeft={data ? Math.max(0, data.nextLimit - thisRound) : null}
+                   onSaved={(m) => { setMsg(m); load() }}>
         <ManualEntry nextRound={data?.nextRound} onSaved={(m) => { setMsg(m); load() }} />
       </NumberMaker>
 
