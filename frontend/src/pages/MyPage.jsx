@@ -90,8 +90,9 @@ export default function MyPage() {
               <div className="card-stat" style={{ fontSize: 32, marginBottom: 0 }}>{data ? `${data.nextRound}회` : '-'}</div>
             </div>
             <div className="card-dark card-main">
-              <div className="card-label">{data ? `${data.nextRound}회` : '이번 회차'} 저장한 번호</div>
-              <div className="card-stat">{data ? thisRound : '-'}<span style={{ fontSize: 24 }}> / {data?.nextLimit ?? '-'}줄</span></div>
+              <div className="card-label">{data ? `${data.nextRound}회` : '이번 회차'} 쓴 선점 슬롯</div>
+              <div className="card-stat">{data ? data.nextUsed : '-'}<span style={{ fontSize: 24 }}> / {data?.nextLimit ?? '-'}줄</span></div>
+              <div className="card-row"><span>이번 회차 저장</span><span className="num">{data ? `${thisRound}줄` : '-'}</span></div>
               <div className="card-row"><span>전체 저장</span><span className="num">{data ? `${tickets.length}줄` : '-'}</span></div>
               <div className="card-row"><span>최고 결과</span><span className="num">{best >= 0 ? `${best}개 일치` : '-'}</span></div>
             </div>
@@ -101,7 +102,8 @@ export default function MyPage() {
 
       <MemberChat />
 
-      <RewardPanel rewards={rewards} used={data ? thisRound : null}
+      <RewardPanel rewards={rewards} used={data ? data.nextUsed : null}
+                   generated={data?.nextGenerated} manual={data?.nextManual}
                    onAttend={async () => {
                      try {
                        const r = await attendToday()
@@ -111,8 +113,8 @@ export default function MyPage() {
                      } catch (e) { setMsg(e.message) }
                    }} />
 
-      <NumberMaker nextRound={data?.nextRound} slotsLeft={data ? Math.max(0, data.nextLimit - thisRound) : null}
-                   onSaved={(m) => { setMsg(m); load() }}>
+      <NumberMaker nextRound={data?.nextRound} slotsLeft={data ? Math.max(0, data.nextLimit - data.nextUsed) : null}
+                   onGenerated={load} onSaved={(m) => { setMsg(m); load() }}>
         <ManualEntry nextRound={data?.nextRound} onSaved={(m) => { setMsg(m); load() }} />
       </NumberMaker>
 
@@ -192,7 +194,7 @@ export default function MyPage() {
 const REWARD_LABEL = { attend: '출석 체크', catch: '번호 캐치', runner: '공 점프 러너' }
 const GAME_LINK = { catch: '/draws#catch', runner: '/draws#runner' }
 
-function RewardPanel({ rewards: r, used, onAttend }) {
+function RewardPanel({ rewards: r, used, generated, manual, onAttend }) {
   if (!r) return null
   const barW = (v) => `${Math.min(100, (v / r.max) * 100)}%`
   const left = used == null ? null : Math.max(0, r.limit - used)
@@ -204,6 +206,7 @@ function RewardPanel({ rewards: r, used, onAttend }) {
           <p>
             {r.round}회 조합은 기본 {r.base}줄까지 선점할 수 있어요. 출석하거나 미니 게임에서 목표 점수를 넘기면 슬롯이 늘어나요
             (종류마다 하루 한 번, 최대 {r.max}줄). 받은 슬롯은 {r.round}회 추첨 전까지만 쓸 수 있습니다.
+            번호를 만들면 저장하지 않아도 만든 줄 수만큼 슬롯을 쓰고, 만든 번호를 저장할 때는 슬롯이 더 들지 않아요. 직접 입력한 번호는 한 줄에 한 슬롯을 씁니다.
           </p>
         </div>
         <div className="pool-hero">
@@ -213,15 +216,15 @@ function RewardPanel({ rewards: r, used, onAttend }) {
             <div className="caption">기본 {r.base}줄 + 보상 {r.bonus}줄</div>
           </div>
           <div className="pool-side">
-            <div><span className="caption">저장함</span><b className="num">{used ?? '-'}줄</b></div>
-            <div><span className="caption">더 저장 가능</span><b className="num">{left ?? '-'}줄</b></div>
+            <div><span className="caption">쓴 슬롯</span><b className="num">{used ?? '-'}줄</b></div>
+            <div><span className="caption">남은 슬롯</span><b className="num">{left ?? '-'}줄</b></div>
           </div>
         </div>
         <div className="slot-bar" aria-hidden="true">
           <span className="used" style={{ width: barW(Math.min(used ?? 0, r.limit)) }} />
           <span className="free" style={{ width: barW(Math.max(0, r.limit - (used ?? 0))) }} />
         </div>
-        <p className="caption" style={{ marginBottom: 16 }}>진한 부분은 저장한 줄, 옅은 부분은 아직 쓸 수 있는 슬롯 (전체 막대 = {r.max}줄)</p>
+        <p className="caption" style={{ marginBottom: 16 }}>진한 부분은 쓴 슬롯{used != null && ` (만든 번호 ${generated ?? 0}줄 + 직접 입력 ${manual ?? 0}줄)`}, 옅은 부분은 아직 쓸 수 있는 슬롯 (전체 막대 = {r.max}줄)</p>
 
         <div className="pool-grid">
           {r.today.map((t) => (

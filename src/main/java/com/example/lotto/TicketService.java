@@ -21,10 +21,12 @@ public class TicketService {
     private final MemberRepository members;
     private final AnalysisService analysis;
     private final RewardService rewards;
+    private final GeneratedSetRepository generated;
 
     public TicketService(TicketRepository tickets, DrawRepository draws, MemberRepository members, AnalysisService analysis,
-                         RewardService rewards) {
+                         RewardService rewards, GeneratedSetRepository generated) {
         this.rewards = rewards;
+        this.generated = generated;
         this.tickets = tickets;
         this.draws = draws;
         this.members = members;
@@ -201,30 +203,47 @@ public class TicketService {
         return out;
     }
 
-    /** 이 회원이 다음 회차에 아직 선점할 수 있는 줄 수 (한도 - 이미 저장한 줄) */
-    public int slotsLeft(Long memberId, int round) {
-        return Math.max(0, rewards.limit(memberId, round) - tickets.findByMemberIdAndRound(memberId, round).size());
+    /**
+     * 그 회차 선점 슬롯 사용량. 만든 번호는 저장하지 않아도 한 줄에 한 슬롯을 쓰고(같은 조합을 또 만들어도 따로 센다),
+     * 만든 번호를 저장할 때는 더 쓰지 않는다. 직접 입력처럼 만든 적 없는 번호를 저장하면 한 줄에 한 슬롯을 쓴다.
+     */
+    record SlotUsage(int limit, int generated, int manual, Set<List<Integer>> generatedSets) {
+        int used() { return generated + manual; }
+        int left() { return Math.max(0, limit - used()); }
+    }
+
+    SlotUsage slotUsage(Long memberId, int round) {
+        List<GeneratedSet> gens = generated.findByMemberIdAndRound(memberId, round);
+        Set<List<Integer>> genSets = new HashSet<>();
+        for (GeneratedSet g : gens) genSets.add(g.numbers());
+        int manual = (int) tickets.findByMemberIdAndRound(memberId, round).stream().filter(t -> !genSets.contains(t.numbers())).count();
+        return new SlotUsage(rewards.limit(memberId, round), gens.size(), manual, genSets);
     }
 
     /**
-     * 회원 번호 만들기: 다음 회차에 남은 선점 슬롯만큼만 만들 수 있다.
+     * 회원 번호 만들기: 다음 회차에 남은 선점 슬롯만큼만 만들 수 있고, 만든 줄은 저장하지 않아도 슬롯을 쓴다.
      * 슬롯을 다 쓰면 만들기 자체가 막히고, 출석·게임 보상으로 슬롯이 늘면 다시 만들 수 있다.
      */
-    public Map<String, Object> generateFor(String username, int caseNo, int count, double conf, Collection<Integer> removed) {
+    @Transactional
+    public synchronized Map<String, Object> generateFor(String username, int caseNo, int count, double conf, Collection<Integer> removed) {
         if (count < 1 || count > 10) throw new IllegalArgumentException("한 번에 1~10줄까지 만들 수 있습니다.");
         Long mid = memberId(username);
         int round = rewards.nextRound();
-        int limit = rewards.limit(mid, round);
-        int left = slotsLeft(mid, round);
-        if (left == 0) {
-            throw new IllegalArgumentException(round + "회 선점 슬롯 " + limit + "줄을 모두 썼어요. 출석 체크나 미니 게임 목표 점수로 슬롯을 늘리면 더 만들 수 있어요.");
+        SlotUsage u = slotUsage(mid, round);
+        if (u.left() == 0) {
+            throw new IllegalArgumentException(round + "회 선점 슬롯 " + u.limit() + "줄을 모두 썼어요. 출석 체크나 미니 게임 목표 점수로 슬롯을 늘리면 더 만들 수 있어요.");
         }
-        if (count > left) {
-            throw new IllegalArgumentException(round + "회에는 남은 선점 슬롯 " + left + "줄까지만 만들 수 있어요.");
+        if (count > u.left()) {
+            throw new IllegalArgumentException(round + "회에는 남은 선점 슬롯 " + u.left() + "줄까지만 만들 수 있어요.");
         }
         Map<String, Object> out = generate(caseNo, count, conf, removed);
-        out.put("slotLimit", limit);
-        out.put("slotsLeft", left);
+        @SuppressWarnings("unchecked")
+        List<List<Integer>> sets = (List<List<Integer>>) out.get("sets");
+        Double c = caseNo == 0 ? null : conf;
+        for (List<Integer> nums : sets) generated.save(new GeneratedSet(mid, round, nums, caseNo, c));
+        out.put("slotLimit", u.limit());
+        out.put("slotUsed", u.used() + sets.size());
+        out.put("slotsLeft", u.left() - sets.size());
         return out;
     }
 
@@ -245,11 +264,18 @@ public class TicketService {
         if (memo != null && memo.isEmpty()) memo = null;
 
         List<Ticket> existing = tickets.findByMemberIdAndRound(mid, round);
-        int limit = rewards.limit(mid, round);
-        if (existing.size() + req.sets().size() > limit) {
-            int left = Math.max(0, limit - existing.size());
-            throw new IllegalArgumentException(round == next && limit < MAX_PER_ROUND
-                    ? round + "회에는 지금 " + limit + "줄까지 선점할 수 있어요 (남은 " + left + "줄). 출석 체크나 미니 게임 목표 점수로 슬롯을 늘릴 수 있어요."
+        if (round == next) {
+            // 다음 회차: 만든 번호는 이미 슬롯을 썼으니 그대로 저장, 만든 적 없는 번호만 슬롯을 더 쓴다
+            SlotUsage u = slotUsage(mid, round);
+            long extra = req.sets().stream().filter(n -> n == null || !u.generatedSets().contains(n.stream().sorted().toList())).count();
+            if (extra > u.left()) {
+                throw new IllegalArgumentException(round + "회에는 지금 " + u.limit() + "줄까지 선점할 수 있어요 (만든 번호 포함 " + u.used()
+                        + "줄 사용, 남은 " + u.left() + "줄). 출석 체크나 미니 게임 목표 점수로 슬롯을 늘릴 수 있어요.");
+            }
+        }
+        if (existing.size() + req.sets().size() > rewards.limit(mid, round)) {
+            throw new IllegalArgumentException(round == next
+                    ? round + "회에는 지금 " + rewards.limit(mid, round) + "줄까지 저장할 수 있어요."
                     : "한 회차에는 " + MAX_PER_ROUND + "줄까지 저장할 수 있습니다.");
         }
         Set<List<Integer>> mine = new HashSet<>();
@@ -343,7 +369,11 @@ public class TicketService {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("nextRound", next);
         out.put("maxPerRound", MAX_PER_ROUND);
-        out.put("nextLimit", rewards.limit(mid, next));   // 다음 회차에 선점할 수 있는 줄 수 (기본 + 보상)
+        SlotUsage u = slotUsage(mid, next);
+        out.put("nextLimit", u.limit());          // 다음 회차에 선점할 수 있는 줄 수 (기본 + 보상)
+        out.put("nextUsed", u.used());            // 그중 쓴 슬롯 (만든 줄 + 직접 입력으로 저장한 줄)
+        out.put("nextGenerated", u.generated());  // 만든 줄 (저장 여부와 상관없이)
+        out.put("nextManual", u.manual());        // 만든 적 없이 저장한 줄
         out.put("tickets", rows);
         out.put("summary", summary);
         return out;

@@ -80,8 +80,9 @@ function NumberBoard({ opt, removed, onToggle, onReset }) {
 // 번호 만들기: 가설을 고르고 번호판에서 뺄 번호를 정해 번호를 뽑는다.
 // guest 이면 가입 없이 뽑아 보기만 하고(저장 불가), 저장 자리에는 가입 안내가 나온다.
 // slotsLeft 는 회원이 다음 회차에 남은 선점 슬롯 (불러오기 전이면 null). 그만큼만 만들 수 있고, 0이면 만들기가 막힌다.
+// 만든 줄은 저장하지 않아도 슬롯을 쓰므로, 만든 뒤 onGenerated 로 슬롯 현황을 다시 불러오게 한다.
 // children 은 맨 아래에 붙는 내용 (마이페이지의 직접 입력)
-export default function NumberMaker({ nextRound, onSaved, guest = false, slotsLeft = null, children }) {
+export default function NumberMaker({ nextRound, onSaved, onGenerated, guest = false, slotsLeft = null, children }) {
   const [caseNo, setCaseNo] = useState(1)
   const [conf, setConf] = useState('60')
   const [count, setCount] = useState('5')
@@ -119,6 +120,7 @@ export default function NumberMaker({ nextRound, onSaved, guest = false, slotsLe
       const g = await generateNumbers(caseNo, Number(countShown), Number(conf), removed, guest)
       setGen(g)
       setPicked(g.sets.map(() => true))
+      onGenerated?.()
     } catch (e) {
       setError(e.message)
       setGen(null)
@@ -152,7 +154,7 @@ export default function NumberMaker({ nextRound, onSaved, guest = false, slotsLe
             가설을 고르면 지금까지의 당첨 번호로 계산한 가운데 번호를 기준으로, 그 가설의 조건을 만족하는 조합 중에서 무작위로 뽑습니다.
             {guest
               ? ' 가입 없이 바로 뽑아 볼 수 있어요. 마음에 드는 조합을 내 이름으로 저장(선점)하려면 가입이 필요합니다.'
-              : ' 마음에 드는 줄만 골라 저장하세요.'}
+              : ' 만든 줄 수만큼 선점 슬롯을 쓰니, 마음에 드는 줄을 골라 저장하세요.'}
             {' '}다른 회원이 이미 저장한 조합은 나오지 않고 저장할 수도 없습니다.
           </p>
         </div>
@@ -197,7 +199,10 @@ export default function NumberMaker({ nextRound, onSaved, guest = false, slotsLe
                 {round ? `${round}회 ` : ''}선점 슬롯을 모두 썼어요. <a href="#rewards">출석 체크나 미니 게임 목표 점수</a>로 슬롯을 늘리면 더 만들 수 있어요.
               </p>
             ) : (
-              <p className="caption" style={{ marginTop: 8 }}>남은 선점 슬롯 <b className="num">{slotsLeft}줄</b> · 한 번에 {maxCount}줄까지 만들 수 있어요.</p>
+              <p className="caption" style={{ marginTop: 8 }}>
+                남은 선점 슬롯 <b className="num">{slotsLeft}줄</b> · 한 번에 {maxCount}줄까지 만들 수 있어요.
+                만들면 저장하지 않아도 만든 줄 수만큼 슬롯을 쓰고, 만든 번호를 저장할 때는 더 들지 않아요.
+              </p>
             )
           )}
           {error && <p className="notice">{error}</p>}

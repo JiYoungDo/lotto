@@ -34,10 +34,12 @@ class MyPageTest {
     @Autowired PasswordEncoder encoder;
     @Autowired MemberService memberService;
     @Autowired AnalysisService analysis;
+    @Autowired GeneratedSetRepository generated;
 
     @BeforeEach
     void setUp() {
         tickets.deleteAllInBatch();
+        generated.deleteAllInBatch();
         draws.deleteAllInBatch();
         Random rnd = new Random(1);
         for (int r = 1; r <= 60; r++) {   // 1~60회 무작위 당첨 번호
@@ -75,24 +77,45 @@ class MyPageTest {
                 .andExpect(status().isBadRequest());
     }
 
+    private List<List<Integer>> gen(String who, int count) throws Exception {
+        String body = mvc.perform(get("/api/my/generate").param("caseNo", "0").param("count", String.valueOf(count)).with(user(who).roles("USER")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        return com.jayway.jsonpath.JsonPath.read(body, "$.sets");
+    }
+
     @Test
-    void 번호_만들기는_남은_선점_슬롯만큼만_된다() throws Exception {
-        // 기본 5줄 중 3줄 저장 → 남은 2줄
-        save("buyer", "{\"sets\":[[1,2,3,4,5,6],[7,8,9,10,11,12],[13,14,15,16,17,18]]}").andExpect(status().isCreated());
+    void 번호를_만들기만_해도_선점_슬롯을_쓴다() throws Exception {
+        // 기본 5줄: 2줄 만들기 → 저장하지 않아도 2줄 사용
+        List<List<Integer>> first = gen("buyer", 2);
+        mvc.perform(get("/api/my/tickets").with(user("buyer").roles("USER")))
+                .andExpect(jsonPath("$.nextLimit").value(5))
+                .andExpect(jsonPath("$.nextUsed").value(2))
+                .andExpect(jsonPath("$.nextGenerated").value(2));
+
+        // 만든 번호를 저장하면 슬롯이 더 들지 않고, 직접 입력은 한 줄에 한 슬롯
+        save("buyer", "{\"sets\":[" + first.get(0) + "],\"caseNo\":0}").andExpect(status().isCreated());
+        save("buyer", "{\"sets\":[[1,2,3,4,5,6]]}").andExpect(status().isCreated());
+        mvc.perform(get("/api/my/tickets").with(user("buyer").roles("USER")))
+                .andExpect(jsonPath("$.nextUsed").value(3))
+                .andExpect(jsonPath("$.nextManual").value(1));
+
+        // 남은 2줄보다 많이는 못 만든다
         mvc.perform(get("/api/my/generate").param("caseNo", "0").param("count", "3").with(user("buyer").roles("USER")))
                 .andExpect(status().isBadRequest());
-        mvc.perform(get("/api/my/generate").param("caseNo", "0").param("count", "2").with(user("buyer").roles("USER")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.sets.length()").value(2))
-                .andExpect(jsonPath("$.slotsLeft").value(2));
+        List<List<Integer>> second = gen("buyer", 2);
 
-        // 다 쓰면 만들기 자체가 막힌다
-        save("buyer", "{\"sets\":[[19,20,21,22,23,24],[25,26,27,28,29,30]]}").andExpect(status().isCreated());
+        // 다 쓰면 만들기도, 직접 입력 저장도 막히지만 이미 만든 번호는 저장할 수 있다
         mvc.perform(get("/api/my/generate").param("caseNo", "0").param("count", "1").with(user("buyer").roles("USER")))
                 .andExpect(status().isBadRequest());
+        save("buyer", "{\"sets\":[[7,8,9,10,11,12]]}").andExpect(status().isBadRequest());
+        save("buyer", "{\"sets\":[" + second.get(0) + "," + second.get(1) + "," + first.get(1) + "],\"caseNo\":0}")
+                .andExpect(status().isCreated());
+        mvc.perform(get("/api/my/tickets").with(user("buyer").roles("USER")))
+                .andExpect(jsonPath("$.nextUsed").value(5))
+                .andExpect(jsonPath("$.tickets.length()").value(5));
+
         // 다른 회원은 그대로
-        mvc.perform(get("/api/my/generate").param("caseNo", "0").param("count", "5").with(user("other").roles("USER")))
-                .andExpect(status().isOk());
+        gen("other", 5);
     }
 
     @Test
